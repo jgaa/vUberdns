@@ -30,3 +30,11 @@
 *.exe
 *.out
 *.app
+
+# Junk
+*.log
+.kdev4/
+*.kdev4
+
+# Cmake
+build/*

@@ -1,0 +1,76 @@
+; This configuration file uses the INFO format from
+; boost::property_tree. It's pretty simple.
+
+; DNS zones are declared from the root, and each level starts with an
+' alpha '@'
+@com {
+
+    authorative 1
+
+    @onebillionsites {
+        soa {
+            rname       hostmaster
+            serial      1
+            refresh     7200
+            retry       600
+            expire      3600000
+            minimum     60
+        }
+
+        ns {
+        ; The first ns-server is per definition the one referred to by the soa
+            ns1
+            ns2
+        }
+
+        mx { mail    5 }
+
+        a { 127.0.0.1 }
+
+        ; Some cname's
+        @everything {
+            @and {
+               @life {
+                    @of {
+                        @meaning {
+                            @the {
+                                cname onebillionsites.com.
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        @www { cname onebillionsites.com. }
+        @blog { cname onebillionsites.com. }
+        @jgaa { cname onebillionsites.com. }
+        @demo { cname onebillionsites.com. }
+
+        ; More real subdomains
+        @mail {
+            a {
+                82.94.228.250
+            }
+        }
+
+        @ns1 {
+            a {
+                127.0.0.1
+            }
+        }
+
+        @ns2 {
+            a {
+                127.0.0.2
+            }
+        }
+
+        ; any and all (an empty name matches all undefined names)
+        @ {
+            a {
+                127.0.0.1
+            }
+        }
+    }
+}
