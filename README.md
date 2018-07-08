@@ -25,7 +25,7 @@ It's designed for *nix. So far I have only tested it with Debian Linux.
 Build it with cmake, and start it in a console:
 
 ```sh
-~/src/vUberdns$ ./build/src/dnsd/vudnsd -H "localhost:5353" --io-threads 2 -z conf/exampe_zone.txt -C TRACE1
+~/src/vUberdns$ ./build/src/dnsd/vudnsd -H "localhost:5353" --io-threads 2 -z conf/exampe_zone.txt -C
 
 ```
 
