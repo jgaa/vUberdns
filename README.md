@@ -86,3 +86,11 @@ ns2.onebillionsites.com. 300    IN      A       127.0.0.2
 ;; WHEN: Sun Jul 08 17:55:59 EEST 2018
 ;; MSG SIZE  rcvd: 152
 ```
+
+## Running on port 53
+
+If you want the server to use port 53 under Linux, you have several options. You can run it as root (bad, bad idea), or you can give the application permission to use privileged ports. One way to do that is to run the command below.
+
+```sh
+$ sudo setcap CAP_NET_BIND_SERVICE=+eip  ./build/src/dnsd/vudnsd
+```
