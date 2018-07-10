@@ -20,6 +20,7 @@ public:
 
     std::string label() const override { return label_; };
     a_list_t a() const override { return a_; }
+    aaaa_list_t aaaa() const override { return aaaa_; }
     ns_list_t ns() const override { return ns_; }
     mx_list_t mx() const override { return mx_; }
     std::string cname() const override { return cname_; }
@@ -46,6 +47,7 @@ private:
     bool authrorative_;
     std::string fdqn_;
     a_list_t a_;
+    aaaa_list_t aaaa_;
     std::string cname_;
     ns_list_t ns_;
     mx_list_t mx_;

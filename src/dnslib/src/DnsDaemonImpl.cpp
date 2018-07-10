@@ -376,7 +376,7 @@ void DnsDaemonImpl::ProcessQuestion(const Question& question, buffer_t& replyBuf
     }
 
     const auto qtype = question.GetQtype();
-    if (qtype == 1 /* A */ || qtype == 255) {
+    if (qtype == 1 /* A */ || qtype == 28 /* A */ || qtype == 255) {
         if (zone->HaveCname()) {
             // This is a CNAME node
             WAR_ASSERT(zone->a.empty());
@@ -393,13 +393,28 @@ void DnsDaemonImpl::ProcessQuestion(const Question& question, buffer_t& replyBuf
                             Store(a_answer, replyBuffer, numAnswers);
                         }
                     }
+                    if (auto aaaa = zone->aaaa()) {
+                        for(const auto& ip : *aaaa) {
+                            RdataAaaa a_answer{full_cname, ip, existingLabels};
+                            Store(a_answer, replyBuffer, numAnswers);
+                        }
+                    }
                 }
             }
         } else {
-            if (auto a = zone->a()) {
-                for(const auto& ip : *a) {
-                    RdataA a_answer{question.GetOffset(), ip, existingLabels};
-                    Store(a_answer, replyBuffer, numAnswers);
+            if (qtype == 1) {
+                if (auto a = zone->a()) {
+                    for(const auto& ip : *a) {
+                        RdataA a_answer{question.GetOffset(), ip, existingLabels};
+                        Store(a_answer, replyBuffer, numAnswers);
+                    }
+                }
+            } else if (qtype == 28) {
+                if (auto aaaa = zone->aaaa()) {
+                    for(const auto& ip : *aaaa) {
+                        RdataAaaa aaaa_answer{question.GetOffset(), ip, existingLabels};
+                        Store(aaaa_answer, replyBuffer, numAnswers);
+                    }
                 }
             }
         }
@@ -485,6 +500,13 @@ void DnsDaemonImpl::ProcessNsZone(const Zone& zone, uint16_t& numOpt,
         for(const auto& ip : *a) {
             RdataA a_answer(zone.GetDomainName(), ip, existingLabels);
             Store(a_answer, replyBuffer, numOpt);
+        }
+    }
+
+    if (auto aaaa = zone.aaaa()) {
+        for(const auto& ip : *aaaa) {
+            RdataAaaa aaaa_answer(zone.GetDomainName(), ip, existingLabels);
+            Store(aaaa_answer, replyBuffer, numOpt);
         }
     }
 }

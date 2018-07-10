@@ -18,6 +18,7 @@
 #include "vudnslib/Question.h"
 #include "vudnslib/AnswerBase.h"
 #include "vudnslib/RdataA.h"
+#include "vudnslib/RdataAaaa.h"
 #include "vudnslib/RdataCname.h"
 #include "vudnslib/RdataMx.h"
 #include "vudnslib/RdataNs.h"

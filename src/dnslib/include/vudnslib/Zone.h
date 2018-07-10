@@ -67,6 +67,7 @@ public:
     using soa_t = boost::optional<Soa>;
 
     using a_list_t = boost::optional<std::vector<boost::asio::ip::address_v4>>;
+    using aaaa_list_t = boost::optional<std::vector<boost::asio::ip::address_v6>>;
     using ns_list_t = boost::optional<std::vector<ns_t>>;
     using mx_list_t = boost::optional<std::vector<mx_t>>;
 
@@ -85,8 +86,8 @@ public:
     };
 
     virtual std::string label() const { return {}; }
-    //virtual std::string fdqn() const { return {}; }
     virtual a_list_t a() const { return {}; }
+    virtual aaaa_list_t aaaa() const { return {}; }
     virtual ns_list_t ns() const { return {};}
     virtual mx_list_t mx() const { return {}; }
     virtual std::string cname() const { return {}; } //fqdn

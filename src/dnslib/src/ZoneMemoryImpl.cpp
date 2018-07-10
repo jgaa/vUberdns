@@ -76,6 +76,13 @@ ZoneMemoryImpl::Create(const std::string& name,
         }
     }
 
+    if (auto aaaa = pt.get_child_optional("aaaa")) {
+        zone->aaaa_ = aaaa_list_t::value_type{};
+        for(auto it = aaaa->begin() ; it != aaaa->end(); ++it) {
+            zone->aaaa_->push_back(boost::asio::ip::address_v6::from_string(it->first));
+        }
+    }
+
     zone->children_ = mgr.AddZones(pt, zone);
 
     return zone;
