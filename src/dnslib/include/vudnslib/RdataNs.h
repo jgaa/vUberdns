@@ -8,7 +8,7 @@ class RdataNs : public AnswerBase
 {
 public:
     RdataNs(const std::string& domain, const std::string& fdqn, existing_labels_t& existingLabels)
-    : AnswerBase(domain, 2 /* CNAME type */, 0, existingLabels ),
+    : AnswerBase(domain, TYPE_NS, 0, existingLabels ),
     fdqn_(fdqn)
     {
     }

@@ -8,7 +8,7 @@ class RdataCname : public AnswerBase
 {
 public:
     RdataCname(uint16_t namePtr, const std::string& cname, existing_labels_t& existingLabels)
-    : AnswerBase(namePtr, 5 /* CNAME type */, 0, existingLabels ),
+    : AnswerBase(namePtr, TYPE_CNAME, 0, existingLabels ),
     cname_(cname)
     {
     }

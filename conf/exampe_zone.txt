@@ -5,7 +5,7 @@
 ' alpha '@'
 @com {
 
-    authorative 1
+    authorative 0
 
     @onebillionsites {
         soa {
@@ -16,6 +16,8 @@
             expire      3600000
             minimum     60
         }
+
+        authorative 1
 
         ns {
         ; The first ns-server is per definition the one referred to by the soa

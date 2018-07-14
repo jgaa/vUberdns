@@ -11,6 +11,7 @@
 #include "warlib/error_handling.h"
 
 #include "vudnslib/Zone.h"
+#include "vudnslib/type_values.h"
 
 namespace vuberdns {
 
@@ -67,7 +68,7 @@ private:
     const uint16_t name_ptr_ {0}; // Optional 'pointer' to an offset to a name in the reply message
     const std::string name_; // Optional name (if not using pointer).
     const uint16_t type_ {0};
-    const uint16_t class_ {1}; /* Internet */
+    const uint16_t class_ {CLASS_IN}; /* Internet */
     const uint16_t ttl_ {300}; /* Common value */
     int rdlength_hdr_ {0};
 

@@ -1,6 +1,7 @@
 
 #include "vudnslib/Statistics.h"
 #include "vudnslib/AnswerBase.h"
+#include "vudnslib/type_values.h"
 
 #include "DnsDaemonImpl.h"
 
@@ -291,7 +292,7 @@ void DnsDaemonImpl::ProcessQuestions(const char *queryBuffer,
         Question& question = questions.back();
 
         const auto qclass = question.GetQclass();
-        if (qclass != 1 && qclass != 255) {
+        if (qclass != CLASS_IN) {
             WAR_THROW_T(Refused, "Unsupported Qclass");
         }
 
@@ -376,14 +377,14 @@ void DnsDaemonImpl::ProcessQuestion(const Question& question, buffer_t& replyBuf
     }
 
     const auto qtype = question.GetQtype();
-    if (qtype == 1 /* A */ || qtype == 28 /* A */ || qtype == 255) {
+    if (qtype == TYPE_A || qtype == TYPE_AAAA || qtype == QTYPE_ALL) {
         if (zone->HaveCname()) {
             // This is a CNAME node
             WAR_ASSERT(zone->a.empty());
             std::string full_cname = StoreCname(*zone, question, replyBuffer,
                                                 numAnswers, existingLabels);
 
-            if (qtype == 1) {
+            if (qtype == TYPE_A) {
                 // Add the A records for the cname if available
                 zone = zone_mgr_->Lookup(AnswerBase::ToFraments(full_cname));
                 if (zone) {
@@ -402,14 +403,14 @@ void DnsDaemonImpl::ProcessQuestion(const Question& question, buffer_t& replyBuf
                 }
             }
         } else {
-            if (qtype == 1) {
+            if (qtype == TYPE_A) {
                 if (auto a = zone->a()) {
                     for(const auto& ip : *a) {
                         RdataA a_answer{question.GetOffset(), ip, existingLabels};
                         Store(a_answer, replyBuffer, numAnswers);
                     }
                 }
-            } else if (qtype == 28) {
+            } else if (qtype == TYPE_AAAA) {
                 if (auto aaaa = zone->aaaa()) {
                     for(const auto& ip : *aaaa) {
                         RdataAaaa aaaa_answer{question.GetOffset(), ip, existingLabels};
@@ -418,11 +419,11 @@ void DnsDaemonImpl::ProcessQuestion(const Question& question, buffer_t& replyBuf
                 }
             }
         }
-    } else if (qtype == 5 /* CNAME */) {
+    } else if (qtype == TYPE_CNAME) {
         if (zone->HaveCname()) {
             StoreCname(*zone, question, replyBuffer, numAnswers, existingLabels);
         }
-    } else if (qtype == 6 /* SOA */) {
+    } else if (qtype == TYPE_SOA) {
         if (!soa_zone) {
             WAR_THROW_T(NoSoaRecord, "No SOA record found");
         }
@@ -430,10 +431,10 @@ void DnsDaemonImpl::ProcessQuestion(const Question& question, buffer_t& replyBuf
         Store(soa_answer, replyBuffer, numAnswers);
         AddZone(authoritativeZones, soa_zone);
     }
-    else if (qtype == 2 /* NS */) {
+    else if (qtype == TYPE_NS) {
         AddZone(authoritativeZones, soa_zone);
     }
-    else if (qtype == 15 /* MX */) {
+    else if (qtype == TYPE_MX) {
         if (auto mxlist = zone->mx()) {
             for(const auto mx : *mxlist) {
                 const std::string fdqn = mx.GetFdqn();
@@ -446,7 +447,7 @@ void DnsDaemonImpl::ProcessQuestion(const Question& question, buffer_t& replyBuf
             }
         }
     }
-    if (qtype == 255) {
+    if (qtype == QTYPE_ALL) {
         AddZone(authoritativeZones, soa_zone);
     }
 }

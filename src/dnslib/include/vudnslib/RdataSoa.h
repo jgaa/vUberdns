@@ -9,13 +9,13 @@ class RdataSoa : public AnswerBase
 {
 public:
     RdataSoa(const std::string& domain, const Zone::ptr_t& zone, existing_labels_t& existingLabels)
-    : AnswerBase(domain, 6 /* SOA type */, 0, existingLabels ),
+    : AnswerBase(domain, TYPE_SOA, 0, existingLabels ),
     zone_{zone}
     {
     }
 
     RdataSoa(uint16_t namePtr, const Zone::ptr_t& zone, existing_labels_t& existingLabels)
-    : AnswerBase(namePtr, 6 /* SOA type */, 0, existingLabels ),
+    : AnswerBase(namePtr, TYPE_SOA, 0, existingLabels ),
     zone_{zone}
     {
     }

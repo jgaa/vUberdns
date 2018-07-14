@@ -9,14 +9,14 @@ class RdataA : public AnswerBase
 public:
     RdataA(uint16_t namePtr,
            const boost::asio::ip::address_v4& ip, existing_labels_t& existingLabels)
-    : AnswerBase(namePtr, 1 /* A type */, 4 /* IPv4 length */, existingLabels),
+    : AnswerBase(namePtr, TYPE_A, 4 /* IPv4 length */, existingLabels),
       ip_(ip)
     {
     }
 
     RdataA(const std::string& domain,
            const boost::asio::ip::address_v4& ip, existing_labels_t& existingLabels)
-    : AnswerBase(domain, 1 /* A type */, 4 /* IPv4 length */, existingLabels),
+    : AnswerBase(domain, TYPE_A, 4 /* IPv4 length */, existingLabels),
     ip_(ip)
     {
     }

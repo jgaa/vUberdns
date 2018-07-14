@@ -9,7 +9,7 @@ class RdataMx : public AnswerBase
 public:
     RdataMx(std::uint16_t namePtr, const std::string& fqdn, std::uint16_t pri,
             existing_labels_t& existingLabels)
-    : AnswerBase(namePtr, 15 /* MX type */, 0, existingLabels ),
+    : AnswerBase(namePtr, TYPE_MX, 0, existingLabels ),
     fqdn_(fqdn), pri_{pri}
     {
     }
