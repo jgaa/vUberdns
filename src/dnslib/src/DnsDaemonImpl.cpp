@@ -447,6 +447,12 @@ void DnsDaemonImpl::ProcessQuestion(const Question& question, buffer_t& replyBuf
             }
         }
     }
+    if (qtype == TYPE_TXT || qtype == QTYPE_ALL) {
+        if (zone->HaveTxt()) {
+            RdataTxt txt_answer(question.GetOffset(), zone->txt(), existingLabels);
+            Store(txt_answer, replyBuffer, numAnswers);
+        }
+    }
     if (qtype == QTYPE_ALL) {
         AddZone(authoritativeZones, soa_zone);
     }

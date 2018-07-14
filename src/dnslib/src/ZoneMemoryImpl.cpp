@@ -26,12 +26,19 @@ bool ZoneMemoryImpl::HaveCname() const noexcept {
     return !cname_.empty();
 }
 
+bool ZoneMemoryImpl::HaveTxt() const noexcept {
+    return !txt_.empty();
+}
+
 ZoneMemoryImpl::ptr_t
 ZoneMemoryImpl::Create(const std::string& name,
                        const boost::property_tree::ptree& pt,
                        ptr_t parent, ZoneMgrMemory& mgr) {
 
     auto zone = make_shared<ZoneMemoryImpl>();
+
+    const ZoneMemoryImpl *self = zone.get();
+
     zone->parent_ = parent;
     zone->label_ = name;
     zone->authrorative_ = pt.get<bool>("authorative", false);
@@ -67,6 +74,10 @@ ZoneMemoryImpl::Create(const std::string& name,
 
     if (auto cname = pt.get_optional<string>("cname")) {
         zone->cname_ = *cname;
+    }
+
+    if (auto txt = pt.get_optional<string>("txt")) {
+        zone->txt_ = *txt;
     }
 
     if (auto a = pt.get_child_optional("a")) {

@@ -96,6 +96,14 @@ protected:
      */
     void AddLabelForCompression(uint16_t offset, const char * start);
 
+    /* Write raw data */
+    template <typename T> std::size_t WriteData(buffer_t& buffer, const T& data) {
+        const auto start_size = buffer.size();
+        buffer.push_back(static_cast<uint8_t>(data.size())); // one byte with the string-length
+        std::copy(data.begin(), data.end(), std::back_inserter(buffer));
+        return buffer.size() - start_size;
+    }
+
     /* Write a domain-name into the end of the buffer, using header name-
      * compression if possible
      */

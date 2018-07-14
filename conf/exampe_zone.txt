@@ -35,6 +35,8 @@
             fe80::42:64ff:fe8c:326c
         }
 
+        txt "This is some text"
+
         ; Some cname's
         @everything {
             @and {

@@ -23,6 +23,7 @@
 #include "vudnslib/RdataMx.h"
 #include "vudnslib/RdataNs.h"
 #include "vudnslib/RdataSoa.h"
+#include "vudnslib/RdataTxt.h"
 #include "vudnslib/Zone.h"
 #include "vudnslib/ZoneMgr.h"
 

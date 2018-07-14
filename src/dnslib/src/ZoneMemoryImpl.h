@@ -24,6 +24,7 @@ public:
     ns_list_t ns() const override { return ns_; }
     mx_list_t mx() const override { return mx_; }
     std::string cname() const override { return cname_; }
+    std::string txt() const override { return {txt_}; }
     soa_t soa() const override { return soa_; }
     bool authorative() const override { return authrorative_; }
     Zone::ptr_t parent() const override { return parent_; }
@@ -31,6 +32,7 @@ public:
     std::string GetDomainName() const override;
 
     bool HaveCname() const noexcept override;
+    bool HaveTxt() const noexcept override;
 
     zones_list_t children() const  { return children_; }
 
@@ -45,7 +47,7 @@ private:
     std::string label_;
     soa_t soa_;
     bool authrorative_;
-    std::string fdqn_;
+    std::string txt_;
     a_list_t a_;
     aaaa_list_t aaaa_;
     std::string cname_;

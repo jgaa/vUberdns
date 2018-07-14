@@ -91,11 +91,13 @@ public:
     virtual ns_list_t ns() const { return {};}
     virtual mx_list_t mx() const { return {}; }
     virtual std::string cname() const { return {}; } //fqdn
+    virtual std::string txt() const { return {}; }
     virtual soa_t soa() const {return {}; }
     virtual bool authorative() const { return false; }
     virtual std::string GetDomainName() const { return {}; }
     virtual std::ostream& Print(std::ostream& out, int level = 0) const = 0;
     virtual bool HaveCname() const noexcept { return false; }
+    virtual bool HaveTxt() const noexcept { return false; }
 
 private:
 };
