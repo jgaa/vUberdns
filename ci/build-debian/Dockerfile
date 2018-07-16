@@ -1,5 +1,9 @@
 FROM debian
 
+# This container is meant for building and testing the server,
+# not for running it in production (It contains a full development
+# environment)
+
 MAINTAINER Jarle Aase <jgaa@jgaa.com>
 
 RUN apt-get -q update &&\
@@ -9,12 +13,10 @@ RUN apt-get -q update &&\
     zlib1g-dev g++ cmake make libboost-all-dev libcap2-bin &&\
     gem install --no-ri --no-rdoc fpm &&\
     apt-get -y -q autoremove &&\
-    apt-get -y -q clean
-
-RUN mkdir -p /var/local/src
-RUN mkdir -p /etc/vudnsd
-
-RUN cd /var/local/src &&\
+    apt-get -y -q clean &&\
+    mkdir -p /var/local/src &&\
+    mkdir -p /etc/vudnsd &&\
+    cd /var/local/src &&\
     git clone https://github.com/jgaa/vUberdns.git &&\
     cd vUberdns &&\
     rm -fr build &&\
