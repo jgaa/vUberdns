@@ -11,7 +11,7 @@ pipeline {
     agent { label 'master' }
 
     environment {
-        vudns_VERSION = "0.2"
+        VUDNS_VERSION = "0.2"
     }
 
     stages {
@@ -64,8 +64,8 @@ pipeline {
         stage('Build Debian Stretch Container') {
 
             environment {
-                APP_DEB = "debian-stretch-vudns-${vudns_VERSION}_amd64.deb"
-                APP_BUILD_DIR = "debian-stretch-vudns-${vudns_VERSION}_amd64"
+                APP_DEB = "debian-stretch-vudns-${VUDNS_VERSION}_amd64.deb"
+                APP_BUILD_DIR = "debian-stretch-vudns-${VUDNS_VERSION}_amd64"
             }
 
             steps {
