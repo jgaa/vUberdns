@@ -1,19 +1,16 @@
 FROM debian
 
-# This container is meant for building and testing the server,
-# not for running it in production (It contains a full development
-# environment)
+MAINTAINER Jarle Aase
 
-MAINTAINER Jarle Aase <jgaa@jgaa.com>
+ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get -q update &&\
     apt-get -y -q --no-install-recommends upgrade &&\
     apt-get -y -q install git \
-    automake autoconf ruby ruby-dev rubygems build-essential \
-    zlib1g-dev g++ cmake make libboost-all-dev libcap2-bin &&\
-    gem install --no-ri --no-rdoc fpm &&\
-    apt-get -y -q autoremove &&\
-    apt-get -y -q clean &&\
+        libboost-context1.62.0 libboost-coroutine1.62.0 libboost-program-options1.62.0 \
+        libboost-filesystem1.62.0 libboost-regex1.62.0 libboost-chrono1.62.0 \
+        libboost-thread1.62.0 libboost-date-time1.62.0 libboost-atomic1.62.0 \
+        libicu57 libstdc++6 g++ cmake make libboost-all-dev libcap2-bin &&\
     mkdir -p /var/local/src &&\
     mkdir -p /etc/vudnsd &&\
     cd /var/local/src &&\
@@ -27,9 +24,14 @@ RUN apt-get -q update &&\
     cp src/dnsd/vudnsd /usr/bin &&\
     cp ../conf/exampe_zone.txt /etc/vudnsd/zones.conf &&\
     setcap CAP_NET_BIND_SERVICE=+eip /usr/bin/vudnsd &&\
-    cd && rm -rf /var/local/src
+    cd && rm -rf /var/local/src &&\
+    apt-get -y purge git automake autoconf build-essential \
+        g++ cmake make libboost-all-dev &&\
+    apt-get -y -q autoremove &&\
+    apt-get -y -q clean
 
 USER nobody
+ENV HOME /
 
 EXPOSE 53/udp
 

@@ -1,0 +1,119 @@
+#!/usr/bin/env groovy
+
+// Builds a .deb package under Debian Stretch,
+// Builds a Docker image with the .deb package installed,
+// deploys it, tests that the DNS server works,
+// and uploads the Docker image with the server to
+// Docker Hub.
+
+
+pipeline {
+    agent { label 'master' }
+
+    environment {
+        vudns_VERSION = "0.2"
+    }
+
+    stages {
+        stage('Build from Source-Code') {
+            parallel {
+                stage('Docker-build inside: Debian Stretch') {
+                    // Create a Docker container with the packages we need
+                    // to build the project and create a .deb package.
+                    // Use that for this build.
+                    agent {
+                        dockerfile {
+                            filename 'Dockerfile.build'
+                            dir 'ci/debian/stretch'
+                            label 'master'
+                        }
+                    }
+
+                    environment {
+                        DIST_DIR = "${WORKSPACE}/dist"
+                        BUILD_DIR = "${WORKSPACE}/build"
+                        SRC_DIR = "${WORKSPACE}"
+                        DIST_NAME = 'debian-stretch-'
+                        SHELL = '/bin/bash'
+                    }
+
+                    steps {
+                        echo "Building on debian-stretch-AMD64 in ${WORKSPACE}"
+                        checkout scm
+                        sh 'pwd; ls -la;'
+                        sh './ci/debian/stretch/build.sh'
+                    }
+
+                    post {
+                        success {
+                            echo "Build of Debian package succeeded!"
+
+                            // We want the .deb package as an artifact, so that we can deploy
+                            // it on any Debian Stretch machine with the relevant architecture.
+                            archive "*.deb"
+
+                            // We need the .deb package for the container we will build for the server
+                            stash includes: '*.deb', name: 'debian-stretch-package'
+                        }
+                    }
+                }
+            }
+        }
+
+        // Now, build a container with the server
+        stage('Build Debian Stretch Container') {
+
+            environment {
+                APP_DEB = "debian-stretch-vudns-${vudns_VERSION}_amd64.deb"
+                APP_BUILD_DIR = "debian-stretch-vudns-${vudns_VERSION}_amd64"
+            }
+
+            steps {
+                // Get the .deb package ewe stashed away
+                unstash 'debian-stretch-package'
+                sh 'rm -rf $APP_BUILD_DIR'
+
+                // Create an empty directory where we can build the Docker image.
+                // Copy the relevant files there.
+                // (Docker have some weird constraints...)
+                sh 'mkdir -p $APP_BUILD_DIR'
+                sh 'cp $APP_DEB $APP_BUILD_DIR/vudnsd.deb'
+                sh 'cp ci/debian/stretch/Dockerfile.app $APP_BUILD_DIR/Dockerfile'
+
+                // Build it
+                sh "docker build -t jgaafromnorth/vuberdns:deb-v${env.BUILD_ID} $APP_BUILD_DIR"
+                sh "docker tag jgaafromnorth/vuberdns:deb-v${env.BUILD_ID} jgaafromnorth/vuberdns:latest"
+            }
+        }
+
+        stage('Testing Stretch container') {
+
+            steps {
+                sh script: 'docker stop stretch-vuberdns', returnStatus:true
+                sh "docker run -p 50053:53/udp -d --rm --name stretch-vuberdns jgaafromnorth/vuberdns:deb-v${env.BUILD_ID}"
+
+                sh '/bin/bash -c "dig @127.0.0.1 -p 50053 onebillionsites.com txt | grep This"'
+            }
+
+            post {
+                always {
+                    sh "docker stop stretch-vuberdns"
+                }
+
+                success {
+                    echo "Pushing Debian Stretch container to Docker Hub"
+                        withDockerRegistry([ credentialsId: "8cb91394-2af2-4477-8db8-8c0e13605900", url: "" ]) {
+                        sh "docker push jgaafromnorth/vuberdns:deb-v${env.BUILD_ID}"
+                        sh 'docker push jgaafromnorth/vuberdns:latest'
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            deleteDir()
+        }
+    }
+}

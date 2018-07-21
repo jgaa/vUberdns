@@ -1,6 +1,6 @@
 FROM alpine
 
-MAINTAINER Jarle Aase <jgaa@jgaa.com>
+MAINTAINER Jarle Aase
 
 RUN apk add --no-cache --update git build-base linux-headers boost-dev bzip2-dev python python-dev cmake &&\
     adduser -D vudnsd && mkdir -p /var/local/src
