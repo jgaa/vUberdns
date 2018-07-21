@@ -4,11 +4,11 @@
 # Compile and prepare a .deb package for distribution
 #
 # Example:
-#   UBDNS_VERSION="2.0.1" DIST_DIR=`pwd`/dist BUILD_DIR=`pwd`/build SRC_DIR=`pwd`/UBDNS  ./UBDNS/scripts/package-deb.sh
+#   VUDNS_VERSION="2.0.1" DIST_DIR=`pwd`/dist BUILD_DIR=`pwd`/build SRC_DIR=`pwd`/UBDNS  ./UBDNS/scripts/package-deb.sh
 
-if [ -z "$UBDNS_VERSION" ]; then
-    UBDNS_VERSION="2.0.0"
-    echo "Warning: Missing UBDNS_VERSION variable!"
+if [ -z "$VUDNS_VERSION" ]; then
+    VUDNS_VERSION="1.0.0"
+    echo "Warning: Missing VUDNS_VERSION variable!"
 fi
 
 if [ -z ${DIST_DIR:-} ]; then
@@ -43,7 +43,7 @@ fpm --input-type dir \
     --output-type deb \
     --force \
     --name uberdns \
-    --version ${UBDNS_VERSION} \
+    --version ${VUDNS_VERSION} \
     --vendor "The Last Viking LTD" \
     --description "Authoritative DNS server" \
     --depends libboost-context1.62.0 \
