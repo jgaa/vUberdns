@@ -94,3 +94,10 @@ If you want the server to use port 53 under Linux, you have several options. You
 ```sh
 $ sudo setcap CAP_NET_BIND_SERVICE=+eip  ./build/src/dnsd/vudnsd
 ```
+
+## Prebuilt Docker container
+
+```sh
+$ docker run --name vudnsd -p 53:53/udp -d --rm jgaafromnorth/vuberdns
+```
+
