@@ -64,8 +64,8 @@ pipeline {
         stage('Build Debian Stretch Container') {
 
             environment {
-                APP_DEB = "debian-stretch-vudns-${VUDNS_VERSION}_amd64.deb"
-                APP_BUILD_DIR = "debian-stretch-vudns-${VUDNS_VERSION}_amd64"
+                APP_DEB = "debian-stretch-vuberdns-${VUDNS_VERSION}_amd64.deb"
+                APP_BUILD_DIR = "debian-stretch-vuberdns-${VUDNS_VERSION}_amd64"
             }
 
             steps {

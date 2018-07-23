@@ -42,7 +42,7 @@ cd ${SRC_DIR}
 fpm --input-type dir \
     --output-type deb \
     --force \
-    --name uberdns \
+    --name vuberdns \
     --version ${VUDNS_VERSION} \
     --vendor "The Last Viking LTD" \
     --description "Authoritative DNS server" \
@@ -59,6 +59,6 @@ fpm --input-type dir \
     --depends libcap2-bin \
     --directories /etc/vudnsd \
     --chdir ${DIST_DIR}/ \
-    --package ${DIST_NAME}vudns-VERSION_ARCH.deb \
+    --package ${DIST_NAME}vuberdns-VERSION_ARCH.deb \
     --after-install $BUILD_DIR/setcap.sh &&\
 echo "Debian package is available in $PWD"
