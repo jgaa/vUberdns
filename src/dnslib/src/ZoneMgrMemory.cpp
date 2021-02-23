@@ -63,7 +63,7 @@ ZoneMgrMemory::Lookup(it_t label, it_t end,
     return rval; // Return whatever we found, if anything
 }
 
-void ZoneMgrMemory::Load(const boost::filesystem::path& path) {
+void ZoneMgrMemory::Load(const std::filesystem::path& path) {
     boost::property_tree::ptree dns_pt;
     boost::property_tree::read_info(path.string(), dns_pt);
     zones_ = AddZones(dns_pt);
@@ -90,9 +90,9 @@ ZoneMgrMemory::AddZones(const boost::property_tree::ptree& pt,
 ZoneMgrMemory::ptr_t ZoneMgrMemory::Create(const DnsConfig& config) {
     auto mgr = make_shared<ZoneMgrMemory>();
 
-    boost::filesystem::path path = config.data_path;
+    std::filesystem::path path = config.data_path;
 
-    if (boost::filesystem::is_regular(path)) {
+    if (std::filesystem::is_regular_file(path)) {
         mgr->Load(path);
     } else {
         LOG_WARN_FN << "The dns zones file "

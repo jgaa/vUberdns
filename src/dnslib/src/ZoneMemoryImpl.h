@@ -1,7 +1,7 @@
 #pragma once
 
 #include <boost/optional.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/property_tree/ptree_fwd.hpp>
 
 #include "vudnslib/ZoneMgr.h"
@@ -14,7 +14,7 @@ class ZoneMemoryImpl : public Zone {
 public:
     using ptr_t = std::shared_ptr<ZoneMemoryImpl>;
     using zones_t = std::vector<ZoneMemoryImpl::ptr_t>;
-    using zones_list_t = boost::optional<zones_t>;
+    using zones_list_t = std::optional<zones_t>;
 
     ZoneMemoryImpl() = default;
 

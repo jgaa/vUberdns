@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 #include <boost/asio.hpp>
-#include <boost/optional.hpp>
+#include <optional>
 
 namespace vuberdns {
 
@@ -20,11 +20,12 @@ public:
     void operator = (Zone&&) = delete;
 
     struct Ns {
-        Ns(const std::string& fqdnVal, Zone::ptr_t z)
-        : fqdn{fqdnVal}, zone{std::move(z)} {}
+        Ns() = default;
+        Ns(const std::string& fqdnVal, Zone* z)
+        : fqdn{fqdnVal}, zone{z} {}
 
         std::string fqdn;
-        Zone::ptr_t zone;
+        Zone *zone = {};
 
         std::string GetFdqn() const {
             static const std::string dot(".");
@@ -37,8 +38,9 @@ public:
     using ns_t = struct Ns;
 
     struct Mx : public ns_t {
-        Mx(const std::string& fqdnVal, uint16_t pri, Zone::ptr_t z)
-        : ns_t{fqdnVal, std::move(z)}, priority(pri) {}
+        Mx() = default;
+        Mx(const std::string& fqdnVal, uint16_t pri, Zone *z)
+        : ns_t{fqdnVal, z}, priority(pri) {}
 
         uint16_t priority = 0;
     };
@@ -64,12 +66,12 @@ public:
         static const std::string hostmaster_;
     };
 
-    using soa_t = boost::optional<Soa>;
+    using soa_t = std::optional<Soa>;
 
-    using a_list_t = boost::optional<std::vector<boost::asio::ip::address_v4>>;
-    using aaaa_list_t = boost::optional<std::vector<boost::asio::ip::address_v6>>;
-    using ns_list_t = boost::optional<std::vector<ns_t>>;
-    using mx_list_t = boost::optional<std::vector<mx_t>>;
+    using a_list_t = std::optional<std::vector<boost::asio::ip::address_v4>>;
+    using aaaa_list_t = std::optional<std::vector<boost::asio::ip::address_v6>>;
+    using ns_list_t = std::optional<std::vector<ns_t>>;
+    using mx_list_t = std::optional<std::vector<mx_t>>;
 
     virtual ptr_t parent() const { return {}; }
 

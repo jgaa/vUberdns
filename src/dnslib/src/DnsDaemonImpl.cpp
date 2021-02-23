@@ -1,4 +1,6 @@
 
+#include <warlib/asio.h>
+
 #include "vudnslib/Statistics.h"
 #include "vudnslib/AnswerBase.h"
 #include "vudnslib/type_values.h"
@@ -55,7 +57,7 @@ DnsDaemonImpl::DnsDaemonImpl(war::Threadpool& ioThreadpool, ZoneMgr::ptr_t mgr)
 
 void DnsDaemonImpl::StartReceivingUdpAt(std::string host, std::string port) {
     auto& pipeline = io_threadpool_.GetPipeline(0);
-    io_service_t& ios = pipeline.GetIoService();
+    auto& ios = pipeline.GetIoService();
 
     LOG_DEBUG_FN << "Preparing to listen to: " <<
     log::Esc(host) << " on UDP port " << log::Esc(port);

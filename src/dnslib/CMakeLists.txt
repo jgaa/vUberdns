@@ -8,8 +8,12 @@ add_library(${PROJECT_NAME}
     src/DnsDaemonImpl.cpp
     src/Zone.cpp
     src/ZoneMemoryImpl.cpp
+    src/ZoneMemoryImpl.h
     src/ZoneMgr.cpp
     src/ZoneMgrMemory.cpp
+    src/ZoneMgrMemory.h
+    src/ZoneMgrJson.cpp
+    src/ZoneMgrJson.h
     )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -18,8 +22,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<INSTALL_INTERFACE:include>
     PRIVATE src)
 
-set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 14)
-add_dependencies(${PROJECT_NAME} externalWarlib)
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
+add_dependencies(${PROJECT_NAME} externalWarlib externalRestcCpp)
 
 install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}Config
     ARCHIVE  DESTINATION ${CMAKE_INSTALL_LIBDIR}

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <boost/optional.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/property_tree/ptree_fwd.hpp>
 
 #include "vudnslib/ZoneMgr.h"
@@ -19,7 +19,7 @@ public:
 
     Zone::ptr_t Lookup(const key_t& key, bool *authorative) const override;
 
-    void Load(const boost::filesystem::path& path);
+    void Load(const std::filesystem::path& path);
 
     ZoneMemoryImpl::zones_t AddZones(const boost::property_tree::ptree& pt,
                                      ZoneMemoryImpl::ptr_t parent = {});

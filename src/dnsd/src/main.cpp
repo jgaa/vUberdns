@@ -5,7 +5,7 @@
 
 #include <boost/program_options.hpp>
 #include <boost/property_tree/info_parser.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/algorithm/string.hpp>
 
 #include "warlib/WarLog.h"
@@ -20,7 +20,7 @@ using namespace std;
 using namespace war;
 using namespace vuberdns;
 using namespace vudnsd;
-//using namespace std::string_literals;
+using namespace std::string_literals;
 
 #include "vudnsd.h"
 
@@ -36,7 +36,7 @@ bool ParseCommandLine(int argc, char *argv[], log::LogEngine& logger, Configurat
             "Log-level for the console-log")
         ("log-level,L", po::value<string>()->default_value("NOTICE"),
             "Log-level for the log-file")
-        ("log-file", po::value<string>()->default_value("")->implicit_value("vubercool.log"),
+        ("log-file", po::value<string>()->default_value("")->implicit_value("vudnsd.log"),
             "Name of the log-file")
         ("truncate-log", po::value<bool>()->default_value(true),
             "Truncate the log-file if it already exists")
@@ -178,7 +178,7 @@ int main(int argc, char *argv[]) {
          * below. Then we simply shut down the the thread-pool and wait for the
          * threads in the thread-pool to finish.
          */
-        io_service_t main_thread_service;
+        io_context_t main_thread_service;
         boost::asio::signal_set signals(main_thread_service, SIGINT, SIGTERM,
             SIGQUIT);
         signals.async_wait([&thread_pool](boost::system::error_code /*ec*/,

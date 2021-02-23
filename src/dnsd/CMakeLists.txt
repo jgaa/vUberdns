@@ -13,13 +13,17 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<INSTALL_INTERFACE:include>
     PRIVATE src)
 
-set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 14)
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
 add_dependencies(${PROJECT_NAME} externalWarlib vudnslib)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     ${Boost_LIBRARIES}
+    ${RESTC_CPP_LIB}
+    ${ZLIB_LIBRARIES}
+    ${OPENSSL_LIBRARIES}
     warcore
     vudnslib
+    stdc++fs
     )
 
 install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}App

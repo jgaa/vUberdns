@@ -8,7 +8,7 @@ namespace vudnsd {
 
 struct Configuration
 {
-    int num_io_threads {0};
+    int num_io_threads {2};
     int max_io_thread_queue_capacity {1024 * 64};
     std::string dns_zone_file {"/var/lib/vudns/zones.conf"};
     bool daemon  {false};
