@@ -14,12 +14,16 @@ add_library(${PROJECT_NAME}
     src/ZoneMgrMemory.h
     src/ZoneMgrJson.cpp
     src/ZoneMgrJson.h
+    src/HttpServer.cpp
+    include/vudnslib//HttpServer.h
     )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
+    $<BUILD_INTERFACE:${Boost_INCLUDE_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     PRIVATE ${CMAKE_BINARY_DIR}/generated-include/
     $<INSTALL_INTERFACE:include>
+    PRIVATE $Boost_INCLUDE_DIR
     PRIVATE src)
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)

@@ -18,6 +18,7 @@ ExternalProject_Add(externalWarlib
         -DBoost_USE_STATIC_LIBS=${Boost_USE_STATIC_LIBS}
         -DWAR_AUTORUN_UNIT_TESTS=0 WAR_WITH_UNIT_TESTS=0
         -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+        -DBOOST_ROOT=${BOOST_ROOT}
     )
 
 ExternalProject_Add(externalRestcCpp

@@ -17,6 +17,15 @@ BOOST_FUSION_ADAPT_STRUCT(vuberdns::Zone::Mx,
     (uint16_t, priority)
 );
 
+BOOST_FUSION_ADAPT_STRUCT(vuberdns::Zone::Soa,
+    (std::string, rname)
+    (uint32_t, serial)
+    (uint32_t, refresh)
+    (uint32_t, retry)
+    (uint32_t, expire)
+    (uint32_t, minimum)
+);
+
 BOOST_FUSION_ADAPT_STRUCT(vuberdns::ZoneMgrJson::ZoneData,
     (std::string, label)
     (vuberdns::Zone::soa_t, soa)
@@ -65,7 +74,7 @@ ostream &ZoneMgrJson::ZoneRef::Print(ostream &out, int level) const
 
 Zone::ptr_t ZoneMgrJson::Lookup(const ZoneMgrJson::key_t &key, bool *authorative) const
 {
-
+    return {};
 }
 
 void ZoneMgrJson::Load(const std::filesystem::path &path)
