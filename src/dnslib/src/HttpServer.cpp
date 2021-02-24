@@ -11,6 +11,7 @@ using boost::asio::ip::udp;
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
+using namespace std::placeholders;
 
 HttpServer::HttpServer(war::Threadpool &ioThreadpool, const HttpServer::Config config)
     : config_{move(config)}, io_threadpool_{ioThreadpool}
@@ -51,7 +52,7 @@ void HttpServer::Listen()
             auto& http_pipeline = io_threadpool_.GetAnyPipeline();
 
             boost::asio::spawn(http_pipeline.GetIoService(),
-                               [ep,&http_pipeline,&ios,this]
+                               [this, ep, &ios]
                                (boost::asio::yield_context yield) {
                 beast::error_code ec;
 
@@ -94,10 +95,9 @@ void HttpServer::Listen()
                     boost::asio::spawn(
                         acceptor.get_executor(),
                         std::bind(
-                            &HttpServer::DoSession,
-                            beast::tcp_stream(std::move(socket)),
-                            doc_root,
-                            std::placeholders::_1));
+                            &HttpServer::StartSession,
+                            this,
+                            beast::tcp_stream(std::move(socket)), _1));
                 }
 
             });
@@ -105,6 +105,11 @@ void HttpServer::Listen()
     } // for config_.endpoints
 
 
+
+}
+
+void HttpServer::StartSession(beast::tcp_stream &stream, boost::asio::yield_context yield)
+{
 
 }
 

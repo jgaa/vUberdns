@@ -10,6 +10,7 @@ include(GNUInstallDirs)
 
 find_package(ZLIB REQUIRED)
 find_package(OpenSSL REQUIRED)
+find_package(Threads)
 
 find_package(Boost 1.70 REQUIRED COMPONENTS
     system

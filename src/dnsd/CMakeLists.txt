@@ -25,6 +25,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     warcore
     vudnslib
     stdc++fs
+    ${CMAKE_THREAD_LIBS_INIT}
     )
 
 install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}App
