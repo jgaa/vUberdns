@@ -1,6 +1,7 @@
 
 #include "warlib/WarLog.h"
 #include "vudnslib/HttpServer.h"
+#include "boost/beast/http/string_body.hpp"
 
 namespace vuberdns::http {
 
@@ -12,11 +13,14 @@ namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
 using namespace std::placeholders;
+using namespace std::string_literals;
 
-HttpServer::HttpServer(war::Threadpool &ioThreadpool, const HttpServer::Config config)
-    : config_{move(config)}, io_threadpool_{ioThreadpool}
+HttpServer::HttpServer(war::Threadpool &ioThreadpool,
+                       const HttpServer::Config config,
+                       handle_fn_t handler)
+    : config_{move(config)}, io_threadpool_{ioThreadpool}, handler_{move(handler)}
 {
-
+    assert(handler_);
 }
 
 void HttpServer::Start()
@@ -103,14 +107,71 @@ void HttpServer::Listen()
             });
         }; // for resolver endpoint
     } // for config_.endpoints
-
-
-
 }
 
 void HttpServer::StartSession(beast::tcp_stream &stream, boost::asio::yield_context yield)
 {
+    bool close = false;
+    beast::error_code ec;
+    beast::flat_buffer buffer{1024 * 64};
 
+    while(!close) {
+
+        stream.expires_after(std::chrono::seconds(30));
+
+        // Read a request
+        http::request<http::string_body> req;
+        http::async_read(stream, buffer, req, yield[ec]);
+        if(ec == http::error::end_of_stream)
+            break;
+        if(ec) {
+            LOG_ERROR << "read failed: " << ec;
+            return;
+        }
+
+        if (!req.keep_alive()) {
+            close = true;
+        }
+
+        // TODO: Add authentication check
+
+        if (!req.body().empty()) {
+            const auto ct =req.at(http::field::content_type);
+            // TODO: Check that the type is json
+            LOG_TRACE1 << "Request has content type: " << ct;
+        }
+
+        // TODO: Check that the client accepts our json reply
+        Request request {
+                req.base().target().to_string(),
+                req.base().method_string().to_string(),
+                req.body()
+        };
+
+        const auto reply = handler_(request);
+        if (reply.close) {
+            close = true;
+        }
+
+        // Send the response
+        //handle_request(*doc_root, std::move(req), lambda);
+        http::response<http::string_body> res;
+        res.body() = reply.body;
+        res.result(reply.httpCode);
+        res.base().set(http::field::server, "vUberdns "s + VUDNS_VERSION);
+        res.base().set(http::field::content_type, "application/json; charset=utf-8");
+        res.base().set(http::field::connection, close ? "close" : "keep-alive");
+        res.prepare_payload();
+
+        http::async_write(stream, res, yield[ec]);
+        if(ec) {
+            LOG_ERROR << "write failed: " << ec;
+            return;
+        }
+    }
+
+    // Send a TCP shutdown
+    stream.socket().shutdown(tcp::socket::shutdown_send, ec);
 }
 
 } // ns

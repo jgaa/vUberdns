@@ -171,6 +171,13 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        http::HttpServer http{thread_pool, configuration.api,
+                    [](const http::HttpServer::Request& req) -> http::HttpServer::Reply {
+
+                return {404, false, R"({"error": true, "reason": "Not implemented"})"s};
+            }};
+
+        http.Start();
 
         /* We now put the main-tread to sleep.
          *

@@ -18,6 +18,20 @@ namespace vuberdns::http {
 class HttpServer
 {
 public:
+    struct Request {
+        std::string path;
+        std::string verb;
+        std::string body;
+    };
+
+    struct Reply {
+        uint16_t httpCode = 200;
+        bool close = false;
+        std::string body;
+    };
+
+    using handle_fn_t = std::function<Reply(const Request& req)>;
+
     struct Config {
         struct Endpoint {
             struct Tls {
@@ -33,7 +47,7 @@ public:
         std::vector<Endpoint> endpoints;
     };
 
-    HttpServer(war::Threadpool& ioThreadpool, const Config config);
+    HttpServer(war::Threadpool& ioThreadpool, const Config config, handle_fn_t handler);
     void Start();
 
 private:
@@ -43,6 +57,7 @@ private:
 
     const Config config_;
     war::Threadpool& io_threadpool_;
+    const handle_fn_t handler_;
 };
 
 } // ns

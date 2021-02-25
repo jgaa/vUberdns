@@ -24,6 +24,7 @@ find_package(Boost 1.70 REQUIRED COMPONENTS
 add_library(boost INTERFACE IMPORTED)
 set_property(TARGET boost PROPERTY
     INTERFACE_INCLUDE_DIRECTORIES ${Boost_INCLUDE_DIR})
+add_definitions(-DVUDNS_VERSION=\"${VUDNS_VERSION}\")
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER}")
 

@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include "vudnslib/HttpServer.h"
 
 namespace vudnsd {
 
@@ -14,10 +15,14 @@ struct Configuration
     bool daemon  {false};
     int stats_update_seconds {60};
     std::vector<std::string> hosts;
+
+    vuberdns::http::HttpServer::Config api = {
+        {{"127.0.0.1"}}
+    };
 };
 
 #ifndef APP_VERSION
-#   define APP_VERSION "undefined"
+#   define APP_VERSION VUDNS_VERSION
 #endif
 
 
