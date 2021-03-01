@@ -15,9 +15,10 @@ struct Configuration
     bool daemon  {false};
     int stats_update_seconds {60};
     std::vector<std::string> hosts;
+    std::string port = "domain";
 
     vuberdns::http::HttpServer::Config api = {
-        {{"127.0.0.1"}}
+        {{"127.0.0.1", "8080"}}
     };
 };
 

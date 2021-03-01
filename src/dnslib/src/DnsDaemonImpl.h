@@ -51,6 +51,11 @@ public:
 
     void StartReceivingUdpAt(std::string host, std::string port) override;
 
+    ZoneMgr& GetZoneMgr() override {
+        assert(zone_mgr_);
+        return *zone_mgr_;
+    }
+
 private:
     // This is run individually for each thread processing DNS queries
     void ScheduleDnsHousekeeping(war::Pipeline& pipeline);

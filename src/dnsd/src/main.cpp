@@ -15,12 +15,14 @@
 #include "vudnsd.h"
 #include "vudnslib/DnsDaemon.h"
 #include "vudnslib/DnsConfig.h"
+#include "vudnslib/RestHandler.h"
 
 using namespace std;
 using namespace war;
 using namespace vuberdns;
 using namespace vudnsd;
 using namespace std::string_literals;
+using namespace std::placeholders;
 
 #include "vudnsd.h"
 
@@ -62,10 +64,12 @@ bool ParseCommandLine(int argc, char *argv[], log::LogEngine& logger, Configurat
             "Full path to the dns zone file")
         ;
 
-    po::options_description hosts("Hosts");
+    po::options_description hosts("DNS Hosts");
     hosts.add_options()
-        ("host,H", po::value<decltype(Configuration::hosts)>(&conf.hosts)->multitoken(),
-            "Host and optional port to receive on (UDP) host-or-ip[:port]")
+        ("dns-host,H", po::value<decltype(Configuration::hosts)>(&conf.hosts)->multitoken(),
+            "Host to receive on (UDP) host-or-ip")
+        ("dns-port", po::value<string>(&conf.port)->default_value(conf.port),
+            "Port to receive on (UDP) name-or-digit")
         ;
 
     po::options_description cmdline_options;
@@ -140,7 +144,7 @@ int main(int argc, char *argv[]) {
         for(const auto& host : configuration.hosts) {
 
             string hostname {host};
-            string port = "domain"s;
+            string port = configuration.port;
 
             auto brpos = hostname.find(']');
 
@@ -165,17 +169,16 @@ int main(int argc, char *argv[]) {
             }
 
             if (hostname.empty() || port.empty()) {
-                LOG_WARN << "Empty argument to --host argument!";
+                LOG_WARN << "Empty argument to --host or --dns-port argument!";
             } else {
                 dns_server->StartReceivingUdpAt(hostname, port);
             }
         }
 
-        http::HttpServer http{thread_pool, configuration.api,
-                    [](const http::HttpServer::Request& req) -> http::HttpServer::Reply {
+        RestHandler rest{dns_server->GetZoneMgr()};
 
-                return {404, false, R"({"error": true, "reason": "Not implemented"})"s};
-            }};
+        http::HttpServer http{thread_pool, configuration.api,
+                    bind(&RestHandler::Process, &rest, _1)};
 
         http.Start();
 

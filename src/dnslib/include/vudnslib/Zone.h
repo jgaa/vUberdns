@@ -7,10 +7,80 @@
 
 namespace vuberdns {
 
+class NotFoundException : public std::runtime_error
+{
+public:
+    NotFoundException(const std::string& why)
+        : runtime_error(why) {}
+};
+
+class AlreadyExistsException : public std::runtime_error
+{
+public:
+    AlreadyExistsException(const std::string& why)
+        : runtime_error(why) {}
+};
+
+class ValidateException : public std::runtime_error
+{
+public:
+    ValidateException(const std::string& why)
+        : runtime_error(why) {}
+};
+
+class NotImplementedException : public std::runtime_error
+{
+public:
+    NotImplementedException()
+        : runtime_error("Not implemented") {}
+};
+
 // Interface for Zone
 class Zone {
 public:
     using ptr_t = std::shared_ptr<Zone>;
+
+    // Boost asio ipv4/6 can't initialize directly from strings, so we either
+    // have to write code to do it after we deserialize json, or add the magic below
+    // to make the deserializer do it directly.
+    template <typename T>
+    class ipT : public T {
+    public:
+        using base_t = T;
+        ipT() = default;
+        ipT(const base_t& v) : base_t{v} {}
+        ipT(base_t&& v) : base_t{std::move(v)} {}
+        ipT(const std::string& ip)
+            : base_t(from_string(ip))
+        {}
+
+        ipT& operator = (const base_t& v) {
+            base_t::operator = (v);
+            return *this;
+        }
+
+        ipT& operator = (const base_t&& v) {
+            base_t::operator = (std::move(v));
+            return *this;
+        }
+
+        ipT& operator = (const std::string& ip) {
+            base_t::operator = (from_string(ip));
+            return *this;
+        }
+
+        static base_t from_string(const std::string& ip) {
+            if constexpr (std::is_same_v<base_t, boost::asio::ip::address_v4>) {
+                return boost::asio::ip::make_address_v4(ip);
+            }
+            if constexpr (std::is_same_v<base_t, boost::asio::ip::address_v6>) {
+                return boost::asio::ip::make_address_v6(ip);
+            }
+        }
+    };
+
+    using ipv4_t = ipT<boost::asio::ip::address_v4>;
+    using ipv6_t = ipT<boost::asio::ip::address_v6>;
 
     Zone() = default;
     virtual ~Zone() = default;
@@ -21,16 +91,15 @@ public:
 
     struct Ns {
         Ns() = default;
-        Ns(const std::string& fqdnVal, Zone* z)
-        : fqdn{fqdnVal}, zone{z} {}
+        Ns(const std::string& fqdnVal)
+        : fqdn{fqdnVal} {}
 
         std::string fqdn;
-        Zone *zone = {};
 
-        std::string GetFdqn() const {
+        std::string GetFdqn(const std::string& domainName) const {
             static const std::string dot(".");
-            if (zone)
-                return fqdn + dot + zone->GetDomainName();
+            if (!domainName.empty())
+                return fqdn + dot + domainName;
             return fqdn;
         }
     };
@@ -39,10 +108,10 @@ public:
 
     struct Mx : public ns_t {
         Mx() = default;
-        Mx(const std::string& fqdnVal, uint16_t pri, Zone *z)
-        : ns_t{fqdnVal, z}, priority(pri) {}
+        Mx(const std::string& fqdnVal, uint16_t pri)
+        : ns_t{fqdnVal}, priority(pri) {}
 
-        uint16_t priority = 0;
+        unsigned int priority = 0;
     };
 
     using mx_t = struct Mx;
@@ -68,8 +137,8 @@ public:
 
     using soa_t = std::optional<Soa>;
 
-    using a_list_t = std::optional<std::vector<boost::asio::ip::address_v4>>;
-    using aaaa_list_t = std::optional<std::vector<boost::asio::ip::address_v6>>;
+    using a_list_t = std::optional<std::vector<ipv4_t>>;
+    using aaaa_list_t = std::optional<std::vector<ipv6_t>>;
     using ns_list_t = std::optional<std::vector<ns_t>>;
     using mx_list_t = std::optional<std::vector<mx_t>>;
 
@@ -104,5 +173,15 @@ public:
 private:
 };
 
+}
+
+namespace std {
+inline std::string to_string(const vuberdns::Zone::ipv4_t& v) {
+    return v.to_string();
+}
+
+inline std::string to_string(const vuberdns::Zone::ipv6_t& v) {
+    return v.to_string();
+}
 }
 

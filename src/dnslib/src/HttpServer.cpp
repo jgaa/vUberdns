@@ -34,9 +34,6 @@ void HttpServer::Listen()
     auto& ios = pipeline.GetIoService();
 
     for(const auto& cep : config_.endpoints) {
-        LOG_DEBUG_FN << "Preparing to listen to: " <<
-        log::Esc(cep.host) << " on HTTP port " << log::Esc(cep.port);
-
         tcp::resolver resolver(ios);
 
         auto port = cep.port;
@@ -46,6 +43,9 @@ void HttpServer::Listen()
             else
                 port = "http";
         }
+
+        LOG_DEBUG_FN << "Preparing to listen to: " <<
+            log::Esc(cep.host) << " on HTTP port " << log::Esc(port);
 
         auto endpoint = resolver.resolve({cep.host, port});
         tcp::resolver::iterator end;
@@ -116,10 +116,7 @@ void HttpServer::StartSession(beast::tcp_stream &stream, boost::asio::yield_cont
     beast::flat_buffer buffer{1024 * 64};
 
     while(!close) {
-
         stream.expires_after(std::chrono::seconds(30));
-
-        // Read a request
         http::request<http::string_body> req;
         http::async_read(stream, buffer, req, yield[ec]);
         if(ec == http::error::end_of_stream)
@@ -153,8 +150,6 @@ void HttpServer::StartSession(beast::tcp_stream &stream, boost::asio::yield_cont
             close = true;
         }
 
-        // Send the response
-        //handle_request(*doc_root, std::move(req), lambda);
         http::response<http::string_body> res;
         res.body() = reply.body;
         res.result(reply.httpCode);

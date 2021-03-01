@@ -439,7 +439,7 @@ void DnsDaemonImpl::ProcessQuestion(const Question& question, buffer_t& replyBuf
     else if (qtype == TYPE_MX) {
         if (auto mxlist = zone->mx()) {
             for(const auto mx : *mxlist) {
-                const std::string fdqn = mx.GetFdqn();
+                const std::string fdqn = mx.GetFdqn(zone->GetDomainName());
 
                 RdataMx mx_answer(question.GetOffset(), fdqn, mx.priority, existingLabels);
                 Store(mx_answer, replyBuffer, numAnswers);
@@ -489,7 +489,7 @@ void DnsDaemonImpl::ProcessNsAuthZone(const Zone& zone, uint16_t& numAuth,
     // Store Name Servers
     if (auto nslist = zone.ns()) {
         for(const auto ns : *nslist) {
-            const string nameserver_fdqn = ns.GetFdqn();
+            const string nameserver_fdqn = ns.GetFdqn(zone.GetDomainName());
             RdataNs auth_ns(zone.GetDomainName(), nameserver_fdqn, existingLabels);
             Store(auth_ns, replyBuffer, numAuth);
 

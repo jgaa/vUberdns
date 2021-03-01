@@ -8,6 +8,7 @@
 namespace vuberdns {
 
 class DnsConfig;
+class ZoneMgr;
 
 class DnsDaemon
 {
@@ -21,6 +22,8 @@ public:
 
     /*! Start to process incoming UDP queries at this address */
     virtual void StartReceivingUdpAt(std::string host, std::string port) = 0;
+
+    virtual ZoneMgr& GetZoneMgr() = 0;
 
     /*! Fabric */
     static ptr_t Create(war::Threadpool& ioThreadpool,

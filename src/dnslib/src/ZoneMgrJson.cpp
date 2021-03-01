@@ -1,47 +1,11 @@
 
 #include <filesystem>
 
-#include <boost/fusion/adapted.hpp>
-
 #include "ZoneMgrJson.h"
-#include "restc-cpp/SerializeJson.h"
 #include "vudnslib/DnsConfig.h"
+#include "vudnslib/util.h"
+
 #include "warlib/WarLog.h"
-
-BOOST_FUSION_ADAPT_STRUCT(vuberdns::Zone::Ns,
-    (std::string, fqdn)
-);
-
-BOOST_FUSION_ADAPT_STRUCT(vuberdns::Zone::Mx,
-    (std::string, fqdn)
-    (uint16_t, priority)
-);
-
-BOOST_FUSION_ADAPT_STRUCT(vuberdns::Zone::Soa,
-    (std::string, rname)
-    (uint32_t, serial)
-    (uint32_t, refresh)
-    (uint32_t, retry)
-    (uint32_t, expire)
-    (uint32_t, minimum)
-);
-
-BOOST_FUSION_ADAPT_STRUCT(vuberdns::ZoneMgrJson::ZoneData,
-    (std::string, label)
-    (vuberdns::Zone::soa_t, soa)
-    (bool, authrorative)
-    (std::string, txt)
-    (vuberdns::Zone::a_list_t, a)
-    (vuberdns::Zone::aaaa_list_t, aaaa)
-    (std::string, cname)
-    (vuberdns::Zone::ns_list_t, ns)
-    (vuberdns::Zone::mx_list_t, mx)
-);
-
-BOOST_FUSION_ADAPT_STRUCT(vuberdns::ZoneMgrJson::ZoneNode,
-    (vuberdns::ZoneMgrJson::ZoneData, zone)
-    (std::optional<std::vector<vuberdns::ZoneMgrJson::ZoneNode>>, children)
-);
 
 namespace vuberdns {
 
@@ -74,24 +38,60 @@ ostream &ZoneMgrJson::ZoneRef::Print(ostream &out, int level) const
 
 Zone::ptr_t ZoneMgrJson::Lookup(const ZoneMgrJson::key_t &key, bool *authorative) const
 {
+    if (!zones_) {
+        return {};
+    }
+
+    auto zones = zones_.get();
+    ZoneNode *current = {};
+    for(auto host = key.rbegin(); host != key.rend(); ++host) {
+        current = {};
+        for(auto& z: *zones) {
+            if (z.zone.label == *host) {
+                current = &z;
+                if (current->children && !current->children->empty()) {
+                    zones = &current->children.value();
+                }
+            }
+        }
+
+        if (!current) {
+            break;
+        }
+    }
+
+    if (current) {
+        if (authorative) {
+            *authorative = current->zone.authorative;
+        }
+        return make_shared<ZoneRef>(const_cast<ZoneMgrJson*>(this)->shared_from_this(), *current);
+    }
+
     return {};
 }
 
 void ZoneMgrJson::Load(const std::filesystem::path &path)
 {
     auto zones = make_shared<std::vector<ZoneNode>>();
-    std::ifstream ifs{path.string()};
-    restc_cpp::SerializeFromJson(*zones, ifs);
+    fileToObject(*zones, path);
     zones_ = move(zones);
+    storage_path_ = path;
 }
 
-void ZoneMgrJson::Save(const std::filesystem::path &path)
+void ZoneMgrJson::Save(zones_container_t& storage, const std::filesystem::path &path)
 {
-    if (!zones_) {
-        return;
+    if (path.empty()) {
+        throw runtime_error("I don't know the path to the json storage file. Load() before you try to Save() ?");
     }
+
+    if (path.extension() != "json") {
+        throw runtime_error("Can only save to .json backed storage!");
+    }
+
+    auto tmpName = path.string() + ".tmp";
     std::ofstream out{path.string()};
-    restc_cpp::SerializeToJson(*zones_, out);
+    restc_cpp::SerializeToJson(storage, out);
+    filesystem::rename(tmpName, path);
 }
 
 ZoneMgrJson::ptr_t ZoneMgrJson::Create(const DnsConfig &config)
@@ -111,4 +111,126 @@ ZoneMgrJson::ptr_t ZoneMgrJson::Create(const DnsConfig &config)
     return mgr;
 }
 
+bool ZoneMgrJson::Validate(const string &domain, const Zone &zone)
+{
+    if (!zone.cname().empty()) {
+        if (!zone.a()->empty() || !zone.aaaa()->empty()) {
+            LOG_WARN << "Validate: Zone " << domain << " Must use either cname or a/aaaa";
+            return false; // Must be either cname or IP
+        }
+    }
+
+    auto k = toKey(domain);
+    if (!k.empty()) {
+        if (k.back() != zone.label()) {
+            LOG_WARN << "Validate: Zone " << domain << " Expected label to be " << k.back();
+            return false;
+        }
+    }
+
+    return true;
 }
+
+Zone::ptr_t vuberdns::ZoneMgrJson::CreateZone(const string &domain, const Zone &zone)
+{
+    if (auto [z, _] = LookupName(domain); z) {
+        throw AlreadyExistsException("Domain "s + domain + " already exists");
+    }
+
+    if (!Validate(domain, zone)) {
+        throw ValidateException("Domain "s + domain + " fails validation");
+    }
+
+    // Create a working copy of the domains
+    auto zones = make_shared<zones_container_t>(*zones_);
+
+    // Insert the zone
+    auto hosts = toKey(domain);
+    reverse(hosts.begin(), hosts.end());
+    auto current_level = zones.get();
+    ZoneNode *current = {};
+    bool added = false;
+
+    // Walk the hostnames of the domain, creating "zones" as needed
+    for(auto& host: hosts) {
+        added = false;
+
+        if (current_level) {
+            if (current) {
+                if (!current->children) {
+                    current->children.emplace();
+                }
+
+                current_level = &current->children.value();
+            } else {
+                assert(false);
+                throw runtime_error("Internal error - No current level or current zone");
+            }
+
+         }
+
+        assert(current_level);
+
+        for(auto& z : *current_level) {
+            if (host == z.zone.label) {
+                current = &z;
+                if (current->children) {
+                    current_level = &current->children.value();
+                } else {
+                    current_level = {};
+                }
+                continue;
+            }
+        }
+
+        if (current_level->empty()) {
+            // Create node.
+            auto& node = current_level->emplace_back();
+            node.zone.label = host.to_string();
+            node.zone.authorative = false;
+            node.parent = current;
+            current = &node;
+            current_level = {};
+            added = true;
+        }
+    }
+
+    if (!added) {
+        throw AlreadyExistsException("Domain "s + domain + " already exists. I did not know that...");
+    }
+
+    assert(current);
+    current->zone.assign(zone);
+
+    Save(*zones, storage_path_);
+
+    // Commit
+    zones_ = move(zones);
+
+    return make_shared<ZoneRef>(shared_from_this(), *current);
+}
+
+void vuberdns::ZoneMgrJson::Update(const string &domain, const Zone &zone)
+{
+}
+
+void vuberdns::ZoneMgrJson::Delete(const string &domain)
+{
+}
+
+ZoneMgrJson::ZoneData &ZoneMgrJson::ZoneData::assign(const Zone &zone)
+{
+    label = zone.label();
+    soa = zone.soa();
+    authorative = zone.authorative();
+    txt = zone.txt();
+    a = zone.a();
+    aaaa = zone.aaaa();
+    cname = zone.cname();
+    ns = zone.ns();
+    mx = zone.mx();
+
+    return *this;
+}
+
+} // ns

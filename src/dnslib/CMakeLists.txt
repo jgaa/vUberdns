@@ -3,19 +3,22 @@ project(vudnslib VERSION ${VUDNS_VERSION} LANGUAGES CXX)
 message(STATUS "Configuring ${PROJECT_NAME} ${VUDNS_VERSION}")
 
 add_library(${PROJECT_NAME}
+    include/vudnslib//HttpServer.h
+    include/vudnslib/RestHandler.h
     src/AnswerBase.cpp
     src/DnsDaemon.cpp
     src/DnsDaemonImpl.cpp
+    src/HttpServer.cpp
+    src/RestHandler.cpp
     src/Zone.cpp
     src/ZoneMemoryImpl.cpp
     src/ZoneMemoryImpl.h
     src/ZoneMgr.cpp
-    src/ZoneMgrMemory.cpp
-    src/ZoneMgrMemory.h
     src/ZoneMgrJson.cpp
     src/ZoneMgrJson.h
-    src/HttpServer.cpp
-    include/vudnslib//HttpServer.h
+    src/ZoneMgrMemory.cpp
+    src/ZoneMgrMemory.h
+    src/util.cpp
     )
 
 target_include_directories(${PROJECT_NAME} PUBLIC

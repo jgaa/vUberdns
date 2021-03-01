@@ -58,7 +58,7 @@ ZoneMemoryImpl::Create(const std::string& name,
     if (auto ns = pt.get_child_optional("ns")) {
         zone->ns_ = ns_list_t::value_type {};
         for(auto it = ns->begin() ; it != ns->end(); ++it) {
-            zone->ns_->emplace_back(Zone::ns_t{it->first, zone.get()});
+            zone->ns_->emplace_back(Zone::ns_t{it->first});
         }
 
         zone->soa_->mname = &zone->ns_->front();
@@ -68,7 +68,7 @@ ZoneMemoryImpl::Create(const std::string& name,
         zone->mx_ = mx_list_t::value_type {};
         for(auto it = mx->begin() ; it != mx->end(); ++it) {
             zone->mx_->emplace_back(Zone::mx_t{it->first,
-                it->second.get_value<uint16_t>(), zone.get()});
+                it->second.get_value<uint16_t>()});
         }
     }
 
