@@ -175,6 +175,7 @@ private:
 
 }
 
+// Needed to serialize zones to json
 namespace std {
 inline std::string to_string(const vuberdns::Zone::ipv4_t& v) {
     return v.to_string();
