@@ -1,0 +1,60 @@
+- zone: 
+    label: com
+  children:
+  - zone:
+      label: jgaa
+      soa:
+        expire: 10
+        retry: 60
+        refresh: 10
+        minimum: 10
+      authorative: true
+      txt: A Very cool place
+      a: 
+        - 127.0.0.1
+      aaaa: 
+        - "::1"
+      ns:
+        - fqdn: ns1
+        - fqdn: ns2
+      mx:
+        - fqdn: mail
+          priority: 10
+    children:
+      - zone:
+          label: blog
+          cname: jgaa.com.
+      - zone:
+          label: mail
+          a: 
+            - 127.0.0.2
+      - zone:
+          label: ns1
+          a: 
+            - 127.0.0.1
+      - zone:
+          label: ns2
+          a: 
+            - 127.0.0.2
+    
+  - zone:
+      label: onebillionsites
+      soa:
+        rname: hostmaster
+        refresh: 7200
+        retry: 600
+        expire: 3600000
+        minimum: 60
+      authorative: true
+      ns:
+        - fqdn: ns1
+        - fqdn: ns2
+    children:
+      - zone:
+          label: ns1
+          a: 
+            - 127.0.0.1
+      - zone:
+          label: ns2
+          a: 
+            - 127.0.0.2
