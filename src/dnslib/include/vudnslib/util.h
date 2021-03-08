@@ -53,5 +53,4 @@ auto Split(const strT &data, const char delimiter = '/')
 
     return rval;
 }
-
 }

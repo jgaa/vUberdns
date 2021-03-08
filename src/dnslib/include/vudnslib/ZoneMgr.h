@@ -14,6 +14,7 @@ class ZoneMgr {
 public:
     using ptr_t = std::shared_ptr<ZoneMgr>;
     using key_t = std::vector<boost::string_ref>;
+    using zone_fn_t = std::function<void(Zone &zone)>;
 
     /*! Lookup a zone recursively, starting from the back.
      *
@@ -29,7 +30,7 @@ public:
      *
      *  \throws NotFoundException
      */
-    virtual std::tuple<Zone::ptr_t /*zone*/, bool /*authorative*/> LookupName(const std::string& domain);
+    virtual std::tuple<Zone::ptr_t /*zone*/, bool /*authorative*/> LookupName(const std::string_view& domain);
 
     /*! Create a zone.
      *
@@ -38,7 +39,7 @@ public:
      *
      *  \throws NotFoundException NotImplementedException
      */
-    virtual Zone::ptr_t CreateZone(const std::string& domain, const Zone& zone) {
+    virtual Zone::ptr_t CreateZone(const std::string_view& domain, const Zone& zone) {
         throw NotImplementedException{};
     }
 
@@ -51,7 +52,7 @@ public:
      *
      *  \throws AlreadyExistsException NotImplementedException
      */
-    virtual void Update(const std::string& domain, const Zone& zone) {
+    virtual void Update(const std::string_view& domain, const Zone& zone) {
         throw NotImplementedException{};
     }
 
@@ -61,7 +62,7 @@ public:
      *
      *  \throws NotImplementedException
      */
-    virtual void Delete(const std::string& domain) {
+    virtual void Delete(const std::string_view& domain) {
         throw NotImplementedException{};
     }
 
@@ -77,7 +78,11 @@ public:
      *       `domain` variable. This needs to exist at least for the same
      *       scope as the returned "key".
      */
-    static key_t toKey(const std::string& domain);
+    static key_t toKey(const std::string_view& domain);
+
+    virtual void ForEachZone(const zone_fn_t& fn) {
+        throw NotImplementedException{};
+    }
 };
 
 } // namespace

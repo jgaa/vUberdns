@@ -23,11 +23,56 @@ Zone list format:
 }
 ```
 
+Example:
+``` 
+~$ curl -s http://127.0.0.1:8080/zone/example.com  |  python -m json.tool 
+```
+```json
+{
+    "error": false,
+    "nodes": {
+        "example.com": {
+            "authorative": true,
+            "label": "example",
+            "ns": [
+                {
+                    "fqdn": "ns1"
+                },
+                {
+                    "fqdn": "ns2"
+                }
+            ],
+            "soa": {
+                "expire": 3600000,
+                "minimum": 60,
+                "refresh": 7200,
+                "retry": 600,
+                "serial": 4
+            }
+        },
+        "ns1.example.com": {
+            "a": [
+                "127.0.0.1"
+            ],
+            "authorative": true,
+            "label": "ns1"
+        },
+        "ns2.example.com": {
+            "a": [
+                "127.0.0.2"
+            ],
+            "authorative": true,
+            "label": "ns2"
+        }
+    }
+}
+```
+
 The `zones` are json as described for *Create zone*.
 
 `GET /zones` - Get the root zones from the server. 
 
-`GET /zones/{zone-name}` - Get the child zones for a given zone
+`GET /zones/recurse/{zone-name}` - Get the child zones for a given zone
 
 `GET /zones/authorative` - Get a list of all the zones with Soa record that the server is authorative for.
 
@@ -47,7 +92,7 @@ The request will fail with `409 Conflict` if the zone already exists.
 ```json
 {
     "soa": {
-        "rname": "admin@example.com",
+        "rname": "hostmaster",
         "serial": 1,
         "refresh": 7200,
         "retry": 600,
@@ -55,7 +100,7 @@ The request will fail with `409 Conflict` if the zone already exists.
         "minimum": 60
     },
     
-    "label": "zoone.name",
+    "label": "zone.name",
     "authrorative": true,
     "a": ["192.168.0.1"],
     "aaaa": ["::ffff:c0a8:1"],

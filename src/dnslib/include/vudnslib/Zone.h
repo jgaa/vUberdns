@@ -170,6 +170,12 @@ public:
     virtual bool HaveCname() const noexcept { return false; }
     virtual bool HaveTxt() const noexcept { return false; }
 
+    virtual void ForEachChild(const std::function<void(Zone& zone)>& fn) {
+        throw NotImplementedException{};
+    };
+
+    static bool Validate(const std::string_view &domain, const Zone &zone);
+
 private:
 };
 

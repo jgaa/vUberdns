@@ -7,6 +7,7 @@
 
 #include "vudnslib/DnsConfig.h"
 #include "vudnslib/ZoneMgr.h"
+#include "vudnslib/util.h"
 #include "ZoneMgrMemory.h"
 #include "ZoneMgrJson.h"
 
@@ -15,7 +16,7 @@ namespace vuberdns {
 using namespace std;
 namespace bs = boost::system;
 
-std::tuple<Zone::ptr_t, bool> ZoneMgr::LookupName(const string &domain)
+std::tuple<Zone::ptr_t, bool> ZoneMgr::LookupName(const string_view &domain)
 {
     bool a = false;
     auto z = Lookup(toKey(domain), &a);
@@ -38,27 +39,9 @@ ZoneMgr::ptr_t ZoneMgr::Create(const DnsConfig& config) {
     return ZoneMgrMemory::Create(config);
 }
 
-ZoneMgr::key_t ZoneMgr::toKey(const string &domain)
+ZoneMgr::key_t ZoneMgr::toKey(const string_view &domain)
 {
-    key_t key;
-
-    std::string_view w = domain;
-    do {
-        string_view k;
-        if (const auto pos = w.find('.') ; pos != string::npos) {
-            k = w.substr(0, pos -1);
-            w = w.substr(pos +1);
-        } else {
-            k = w;
-            w = {};
-        }
-
-        if (!k.empty()) {
-            key.push_back(boost::string_ref{k.data(), k.size()});
-        }
-    } while (false);
-
-    return key;
+    return Split<boost::string_ref>(domain, '.');
 }
 
 } // namespace

@@ -16,9 +16,14 @@ public:
     using key_t = const std::vector<boost::string_ref>;
 
     struct ZoneData {
+        ZoneData() = default;
+        ZoneData(const Zone& z) {
+            assign(z);
+        }
+
         std::string label;
         Zone::soa_t soa;
-        bool authorative = false;;
+        bool authorative = true;;
         std::string txt;
         Zone::a_list_t a;
         Zone::aaaa_list_t aaaa;
@@ -33,6 +38,8 @@ public:
         ZoneNode *parent = {};
         ZoneData zone;
         std::optional<std::vector<ZoneNode>> children;
+
+        void Init(ZoneNode *parent);
     };
 
     using zones_container_t = std::vector<ZoneNode>;
@@ -69,6 +76,13 @@ public:
         bool HaveCname() const noexcept override { return !node_.zone.cname.empty(); }
         bool HaveTxt() const noexcept override { return !node_.zone.txt.empty();}
         std::ostream& Print(std::ostream& out, int level = 0) const override;
+
+        void ForEachChild(const std::function<void(Zone& zone)>& fn) override {
+            if (node_.children) {
+                // FIXME: Make const implementation
+                mgr_->ForEachZone_(*const_cast<ZoneNode&>(node_).children, fn);
+            }
+        }
     };
 
     Zone::ptr_t Lookup(const key_t& key, bool *authorative) const override;
@@ -80,16 +94,18 @@ public:
     static ptr_t Create(const DnsConfig& config);
 
 private:
-    static bool Validate(const std::string& domain, const Zone& zone);
+    void ForEachZone_(zones_container_t& zones, const zone_fn_t& fn);
+    void IncrementSerial(ZoneNode& node);
 
    zones_t zones_;
    std::filesystem::path storage_path_;
 
    // ZoneMgr interface
 public:
-   Zone::ptr_t CreateZone(const std::string &domain, const Zone &zone) override;
-   void Update(const std::string &domain, const Zone &zone) override;
-   void Delete(const std::string &domain) override;
+   Zone::ptr_t CreateZone(const std::string_view &domain, const Zone &zone) override;
+   void Update(const std::string_view &domain, const Zone &zone) override;
+   void Delete(const std::string_view &domain) override;
+   void ForEachZone(const zone_fn_t& fn) override;
 };
 } // namespace
 
