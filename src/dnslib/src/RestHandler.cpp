@@ -126,9 +126,11 @@ http::HttpServer::Reply RestHandler::GetZone(const string_view &path, bool recur
         RestReply r;
         r.add(*zone);
 
-        zone->ForEachChild([&r](const auto& cz) {
-           r.add(cz);
-        });
+        if (recurse) {
+            zone->ForEachChild([&r](const auto& cz) {
+               r.add(cz);
+            });
+        }
 
         return make_reply(r);
     }
@@ -144,7 +146,7 @@ http::HttpServer::Reply RestHandler::ProcessGet(const http::HttpServer::Request 
     }
 
     if (paths.at(0) == "zone") {
-        return GetZone(paths.at(1));
+        return GetZone(paths.at(1), false);
     }
 
     if (paths.at(0) == "zones") {

@@ -17,8 +17,8 @@ Zone list format:
 { 
     "error": false,
     "reason": "",
-    "zones": [
-        {...}
+    "nodes": [
+        zone-name: {...}
     ]
 }
 ```
@@ -33,6 +33,7 @@ Example:
     "nodes": {
         "example.com": {
             "authorative": true,
+            "cname": "",
             "label": "example",
             "ns": [
                 {
@@ -47,22 +48,9 @@ Example:
                 "minimum": 60,
                 "refresh": 7200,
                 "retry": 600,
-                "serial": 4
-            }
-        },
-        "ns1.example.com": {
-            "a": [
-                "127.0.0.1"
-            ],
-            "authorative": true,
-            "label": "ns1"
-        },
-        "ns2.example.com": {
-            "a": [
-                "127.0.0.2"
-            ],
-            "authorative": true,
-            "label": "ns2"
+                "serial": 29
+            },
+            "txt": ""
         }
     }
 }
@@ -103,7 +91,7 @@ The request will fail with `409 Conflict` if the zone already exists.
     "label": "zone.name",
     "authrorative": true,
     "a": ["192.168.0.1"],
-    "aaaa": ["::ffff:c0a8:1"],
+    "aaaa": ["::1"],
     "txt": "Some Info",
     "cname": "",
     "ns": [
