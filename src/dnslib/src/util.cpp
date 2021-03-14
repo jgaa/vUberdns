@@ -60,4 +60,49 @@ string fileToJson(const filesystem::path &path, bool assumeYaml)
     return json;
 }
 
+string Base64Encode(const string &in) {
+    // Silence the cursed clang-tidy...
+    constexpr auto magic_4 = 4;
+    constexpr auto magic_6 = 6;
+    constexpr auto magic_8 = 8;
+    constexpr auto magic_3f = 0x3F;
+
+    static const string alphabeth {"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"};
+    string out;
+
+    int val = 0;
+    int valb = -magic_6;
+    for (const uint8_t c : in) {
+        val = (val<<magic_8) + c;
+        valb += magic_8;
+        while (valb>=0) {
+            out.push_back(alphabeth[(val>>valb)&magic_3f]);
+            valb-=magic_6;
+        }
+    }
+    if (valb>-magic_6) out.push_back(alphabeth[((val<<magic_8)>>(valb+magic_8))&magic_3f]);
+    while (out.size()%magic_4) out.push_back('=');
+    return out;
+}
+
+std::string Base64Decode(const std::string &in) {
+
+    string out;
+
+    vector<int> T(256,-1);
+    for (int i=0; i<64; i++) T["ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[i]] = i;
+
+    int val=0, valb=-8;
+    for (uint8_t c : in) {
+        if (T[c] == -1) break;
+        val = (val << 6) + T[c];
+        valb += 6;
+        if (valb >= 0) {
+            out.push_back(char((val>>valb)&0xFF));
+            valb -= 8;
+        }
+    }
+    return out;
+}
+
 }

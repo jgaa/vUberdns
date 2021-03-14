@@ -8,6 +8,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/spawn.hpp>
 #include <boost/config.hpp>
+#include <boost/fusion/adapted.hpp>
 
 namespace vuberdns::http {
 
@@ -44,16 +45,24 @@ public:
             std::optional<Tls> tls;
         };
 
+        struct User {
+            std::string name;
+            std::string passwd;
+        };
+
         std::vector<Endpoint> endpoints;
+        std::vector<User> users;
     };
 
     HttpServer(war::Threadpool& ioThreadpool, const Config config, handle_fn_t handler);
     void Start();
 
+    bool Authenticate(const std::string_view& authHeader);
+
 private:
     void Listen();
-    void StartSession(boost::beast::tcp_stream& stream,
-                      boost::asio::yield_context yield);
+//    void StartSession(boost::beast::tcp_stream& stream,
+//                      boost::asio::yield_context yield);
 
     const Config config_;
     war::Threadpool& io_threadpool_;
@@ -61,3 +70,24 @@ private:
 };
 
 } // ns
+
+BOOST_FUSION_ADAPT_STRUCT(vuberdns::http::HttpServer::Config::Endpoint::Tls,
+    (std::string, key)
+    (std::string, cert)
+);
+
+BOOST_FUSION_ADAPT_STRUCT(vuberdns::http::HttpServer::Config::Endpoint,
+    (std::string, host)
+    (std::string, port)
+    (std::optional<vuberdns::http::HttpServer::Config::Endpoint::Tls>, tls)
+);
+
+BOOST_FUSION_ADAPT_STRUCT(vuberdns::http::HttpServer::Config::User,
+    (std::string, name)
+    (std::string, passwd)
+);
+
+BOOST_FUSION_ADAPT_STRUCT(vuberdns::http::HttpServer::Config,
+    (std::vector<vuberdns::http::HttpServer::Config::Endpoint>, endpoints)
+    (std::vector<vuberdns::http::HttpServer::Config::User>, users)
+);

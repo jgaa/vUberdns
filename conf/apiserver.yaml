@@ -1,0 +1,15 @@
+# Example configuration for api endpoints
+
+endpoints:
+  - host: "::"
+    port: http
+    
+  - host: "::"
+    port: https
+    tls:
+      key: /etc/letsencrypt/live/example.com/privkey.pem
+      cert: /etc/letsencrypt/live/example.com/fullchain.pem
+      
+users:
+  - name: jgaa
+    passwd: Very$ecret!

@@ -8,6 +8,8 @@ namespace vuberdns {
 
 std::string slurp (const std::filesystem::path& path);
 std::string fileToJson(const std::filesystem::path &pathToFile, bool assumeYaml = false);
+std::string Base64Encode(const std::string &in);
+std::string Base64Decode(const std::string &in);
 
 /*! Reads the contents from a .json or .yaml file and serialize it to obj */
 template <typename T>

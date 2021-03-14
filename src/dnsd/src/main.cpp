@@ -16,6 +16,24 @@
 #include "vudnslib/DnsDaemon.h"
 #include "vudnslib/DnsConfig.h"
 #include "vudnslib/RestHandler.h"
+#include "vudnslib/util.h"
+
+struct Config {
+    struct Endpoint {
+        struct Tls {
+            std::string key;
+            std::string cert;
+        };
+
+        std::string host = "[::]";
+        std::string port; // If empty, 80 0r 443 is automatically assigned.
+        std::optional<Tls> tls;
+    };
+
+    std::vector<Endpoint> endpoints;
+};
+
+
 
 using namespace std;
 using namespace war;
@@ -62,6 +80,9 @@ bool ParseCommandLine(int argc, char *argv[], log::LogEngine& logger, Configurat
         ("dns-zones,z",  po::value<string>(&conf.dns_zone_file)->default_value(
             conf.dns_zone_file),
             "Full path to the dns zone file")
+        ("http-config,a",  po::value<string>(&conf.http_config)->default_value(
+            conf.http_config),
+            "Full path to the HTTP (api server) configuration")
         ;
 
     po::options_description hosts("DNS Hosts");
@@ -177,10 +198,13 @@ int main(int argc, char *argv[]) {
 
         RestHandler rest{dns_server->GetZoneMgr()};
 
-        http::HttpServer http{thread_pool, configuration.api,
-                    bind(&RestHandler::Process, &rest, _1)};
-
-        http.Start();
+        std::unique_ptr<http::HttpServer> http;
+        if (!configuration.http_config.empty()) {
+            http::HttpServer::Config cfg;
+            fileToObject(cfg, configuration.http_config);
+            http = make_unique<http::HttpServer>(thread_pool, cfg, bind(&RestHandler::Process, &rest, _1));
+            http->Start();
+        }
 
         /* We now put the main-tread to sleep.
          *

@@ -95,6 +95,8 @@ RestHandler::RestHandler(ZoneMgr &zoneMgr)
 
 http::HttpServer::Reply RestHandler::Process(const http::HttpServer::Request &req)
 {
+    LOG_NOTICE << "Rest request: " << req.verb << " " << req.path;
+
     if (req.verb == "GET") {
         return ProcessGet(req);
     }
