@@ -53,6 +53,39 @@ namespace {
 
         return make_reply({true, reason, {}}, httpCode);
     }
+
+    void Merge(ZoneMgrJson::ZoneData& zone, const Zone& existingZone) {
+        if (!zone.soa) {
+            zone.soa = existingZone.soa();
+        }
+
+        if (!zone.a && !zone.aaaa && !zone.cname) {
+            zone.a = existingZone.a();
+            zone.aaaa = existingZone.aaaa();
+            zone.cname = existingZone.cname();
+        } else {
+            if (!zone.cname || zone.cname->empty()) {
+                if (!zone.a) {
+                    zone.a = existingZone.a();
+                }
+                if (!zone.aaaa) {
+                    zone.aaaa = existingZone.aaaa();
+                }
+            }
+        }
+
+        if (!zone.txt) {
+            zone.txt = existingZone.txt();
+        }
+
+        if (!zone.ns) {
+            zone.ns = existingZone.ns();
+        }
+
+        if (!zone.mx) {
+            zone.mx = existingZone.mx();
+        }
+    }
 }
 
 RestHandler::RestHandler(ZoneMgr &zoneMgr)
@@ -67,7 +100,19 @@ http::HttpServer::Reply RestHandler::Process(const http::HttpServer::Request &re
     }
 
     if (req.verb == "POST") {
-        return ProcessPost(req);
+        return ProcessSet(req, Mode::POST);
+    }
+
+    if (req.verb == "PUT") {
+        return ProcessSet(req, Mode::PUT);
+    }
+
+    if (req.verb == "PATCH") {
+        return ProcessSet(req, Mode::PATCH);
+    }
+
+    if (req.verb == "DELETE") {
+        return ProcessDelete(req);
     }
 
     return make_reply("Not implemented");
@@ -145,7 +190,8 @@ http::HttpServer::Reply RestHandler::ProcessGet(const http::HttpServer::Request 
     return make_reply("Not implemented");
 }
 
-http::HttpServer::Reply RestHandler::ProcessPost(const http::HttpServer::Request &req)
+http::HttpServer::Reply RestHandler::ProcessSet(const http::HttpServer::Request &req,
+                                                const Mode mode)
 {
     auto paths = Split(req.path);
     if (paths.size() != 2 || paths.at(0) != "zone") {
@@ -173,16 +219,61 @@ http::HttpServer::Reply RestHandler::ProcessPost(const http::HttpServer::Request
         zone.label = name;
     }
 
+    bool create = false;
+    switch (mode) {
+    case Mode::POST:
+        create = true;
+        break;
+    case Mode::PUT:
+        create = get<0>(zone_mgr_.LookupName(zone_name)) == nullptr;
+        break;
+    case Mode::PATCH: {
+        auto [currentZone,_] = zone_mgr_.LookupName(zone_name);
+        if (currentZone) {
+            Merge(zone, *currentZone);
+        } else {
+            create = true;
+        }
+        break;
+        }
+    }
+
     // Get a Zone interface to the new zone
     ZoneMgrJson::ZoneNode zn{{}, zone};
     ZoneMgrJson::ZoneRef z{zn};
 
     try {
-        auto newZone = zone_mgr_.CreateZone(zone_name, z);
-        assert(newZone);
-        return make_reply(*newZone);
+        if (create) {
+            return make_reply(*zone_mgr_.CreateZone(zone_name, z));
+        }
+        return make_reply(*zone_mgr_.Update(zone_name, z));
     } catch(const AlreadyExistsException& ex) {
         return make_reply(ex.what(), 409);
+    } catch(const NotFoundException& ex) {
+        return make_reply(ex.what(), 404);
+    } catch (const exception& ex) {
+        return make_reply(ex.what(), 400);
+    }
+
+    assert(false);
+}
+
+http::HttpServer::Reply RestHandler::ProcessDelete(const http::HttpServer::Request &req)
+{
+    auto paths = Split(req.path);
+    if (paths.size() != 2 || paths.at(0) != "zone") {
+        return make_reply("Invalid Request");
+    }
+
+    const auto zone_name = paths.at(1);
+
+    try {
+        zone_mgr_.Delete(zone_name);
+        return make_reply("Zone deleted", 200);
+    } catch(const AlreadyExistsException& ex) {
+        return make_reply(ex.what(), 409);
+    } catch(const NotFoundException& ex) {
+        return make_reply(ex.what(), 404);
     } catch (const exception& ex) {
         return make_reply(ex.what(), 400);
     }

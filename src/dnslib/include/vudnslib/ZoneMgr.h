@@ -52,7 +52,7 @@ public:
      *
      *  \throws AlreadyExistsException NotImplementedException
      */
-    virtual void Update(const std::string_view& domain, const Zone& zone) {
+    virtual Zone::ptr_t Update(const std::string_view& domain, const Zone& zone) {
         throw NotImplementedException{};
     }
 

@@ -10,6 +10,12 @@ namespace vuberdns {
 class RestHandler
 {
 public:
+    enum class Mode {
+        POST,
+        PUT,
+        PATCH
+    };
+
     RestHandler(ZoneMgr& zoneMgr);
 
     http::HttpServer::Reply Process(const http::HttpServer::Request& req);
@@ -17,7 +23,8 @@ public:
 private:
     http::HttpServer::Reply GetZone(const std::string_view& path, bool recurse = false);
     http::HttpServer::Reply ProcessGet(const http::HttpServer::Request& req);
-    http::HttpServer::Reply ProcessPost(const http::HttpServer::Request& req);
+    http::HttpServer::Reply ProcessSet(const http::HttpServer::Request& req, const Mode mode);
+    http::HttpServer::Reply ProcessDelete(const http::HttpServer::Request& req);
 
     Zone::ptr_t Lookup(const std::string_view &path);
 

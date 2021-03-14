@@ -11,7 +11,7 @@ const std::string Zone::Soa::hostmaster_ = { "hostnamster" };
 bool Zone::Validate(const std::string_view &domain, const Zone &zone)
 {
     if (!zone.cname().empty()) {
-        if (!zone.a()->empty() || !zone.aaaa()->empty()) {
+        if ((zone.a() && !zone.a()->empty()) || (zone.aaaa() && !zone.aaaa()->empty())) {
             LOG_WARN << "Validate: Zone " << domain << " Must use either cname or a/aaaa";
             return false; // Must be either cname or IP
         }

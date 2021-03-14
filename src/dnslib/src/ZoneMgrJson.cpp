@@ -38,11 +38,23 @@ ostream &ZoneMgrJson::ZoneRef::Print(ostream &out, int level) const
 
 Zone::ptr_t ZoneMgrJson::Lookup(const ZoneMgrJson::key_t &key, bool *authorative) const
 {
-    if (!zones_) {
+    if (auto z = Search(const_cast<zones_t&>(zones_), key)) {
+        if (authorative) {
+            *authorative = z->zone.authorative;
+        }
+        return make_shared<ZoneRef>(zones_, *z);
+    }
+
+    return {};
+}
+
+ZoneMgrJson::ZoneNode *ZoneMgrJson::Search(ZoneMgrJson::zones_t &root, const ZoneMgrJson::key_t &key)
+{
+    if (!root) {
         return {};
     }
 
-    auto zones = zones_.get();
+    auto zones = root.get();
     ZoneNode *current = {};
     for(auto host = key.rbegin(); host != key.rend(); ++host) {
         current = {};
@@ -61,13 +73,29 @@ Zone::ptr_t ZoneMgrJson::Lookup(const ZoneMgrJson::key_t &key, bool *authorative
     }
 
     if (current) {
-        if (authorative) {
-            *authorative = current->zone.authorative;
-        }
-        return make_shared<ZoneRef>(const_cast<ZoneMgrJson*>(this)->shared_from_this(), *current);
+        return current;
     }
 
     return {};
+}
+
+ZoneMgrJson::zones_t ZoneMgrJson::CopyZones()
+{
+    // Create a working copy of the domains
+    auto zones = make_shared<zones_container_t>(*zones_);
+
+    // We need to adjust the parent pointers, or they will point to the old instances.
+    for(auto& zi: *zones) {
+        zi.Init({});
+    }
+
+    return zones;
+}
+
+void ZoneMgrJson::Commit(ZoneMgrJson::zones_t &zones)
+{
+   Save(*zones, storage_path_);
+   zones_ = move(zones);
 }
 
 void ZoneMgrJson::Load(const std::filesystem::path &path)
@@ -124,13 +152,7 @@ Zone::ptr_t vuberdns::ZoneMgrJson::CreateZone(const string_view &domain, const Z
         throw ValidateException("Domain "s + string(domain) + " fails validation");
     }
 
-    // Create a working copy of the domains
-    auto zones = make_shared<zones_container_t>(*zones_);
-
-    // We need to adjust the parent pointers, or they will point to the old instances.
-    for(auto& zi: *zones) {
-        zi.Init({});
-    }
+    auto zones = CopyZones();
 
     // Insert the zone
     auto hosts = toKey(domain);
@@ -187,20 +209,52 @@ Zone::ptr_t vuberdns::ZoneMgrJson::CreateZone(const string_view &domain, const Z
     assert(current);
     current->zone.assign(zone);
     IncrementSerial(*current);
-    Save(*zones, storage_path_);
-
-    // Commit
-    zones_ = move(zones);
-
-    return make_shared<ZoneRef>(shared_from_this(), *current);
+    Commit(zones);
+    return make_shared<ZoneRef>(zones_, *current);
 }
 
-void vuberdns::ZoneMgrJson::Update(const string_view &domain, const Zone &zone)
+Zone::ptr_t ZoneMgrJson::Update(const string_view &domain, const Zone &zone)
 {
+    if (!Zone::Validate(domain, zone)) {
+        throw ValidateException("Domain "s + string(domain) + " fails validation");
+    }
+
+    auto zones = CopyZones();
+
+    if (auto z = Search(zones, toKey(domain))) {
+        z->zone.assign(zone);
+        IncrementSerial(*z);
+        Commit(zones);
+        return make_shared<ZoneRef>(zones_, *z);
+    }
+
+    throw NotFoundException("Zone not found: "s + string(domain));
 }
 
 void vuberdns::ZoneMgrJson::Delete(const string_view &domain)
 {
+    auto zones = CopyZones();
+    bool deleted = false;
+
+    if (auto z = Search(zones, toKey(domain))) {
+        IncrementSerial(*z);
+        if (auto parent = z->parent) {
+           for(auto it = parent->children->begin(); it !=  parent->children->end(); ++it) {
+               if (&(*it) == z) {
+                   parent->children->erase(it);
+                   deleted = true;
+                   break;
+               }
+           }
+        }
+
+        if (deleted) {
+            Commit(zones);
+            return;
+        }
+    }
+
+    throw NotFoundException("Zone not found: "s + string(domain));
 }
 
 ZoneMgrJson::ZoneData &ZoneMgrJson::ZoneData::assign(const Zone &zone)
@@ -218,16 +272,16 @@ ZoneMgrJson::ZoneData &ZoneMgrJson::ZoneData::assign(const Zone &zone)
     return *this;
 }
 
-void ZoneMgrJson::ForEachZone_(ZoneMgrJson::zones_container_t &zones, const ZoneMgr::zone_fn_t &fn)
+void ZoneMgrJson::ForEachZone_(const zones_t& root, ZoneMgrJson::zones_container_t &zones, const ZoneMgr::zone_fn_t &fn)
 {
     for(auto& zone : zones) {
         {
-            ZoneRef z{shared_from_this(), zone};
+            ZoneRef z{root, zone};
             fn(z);
         }
 
         if (zone.children) {
-            ForEachZone_(*zone.children, fn);
+            ForEachZone_(root, *zone.children, fn);
         }
     }
 }
@@ -253,7 +307,7 @@ void ZoneMgrJson::IncrementSerial(ZoneMgrJson::ZoneNode &node)
 void ZoneMgrJson::ForEachZone(const zone_fn_t& fn)
 {
     if (zones_) {
-        ForEachZone_(*zones_, fn);
+        ForEachZone_(zones_, *zones_, fn);
     }
 }
 
