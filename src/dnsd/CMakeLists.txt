@@ -18,12 +18,12 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
 add_dependencies(${PROJECT_NAME} externalWarlib vudnslib)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    ${Boost_LIBRARIES}
+    vudnslib
+    warcore
     ${RESTC_CPP_LIB}
+    ${Boost_LIBRARIES}
     ${ZLIB_LIBRARIES}
     ${OPENSSL_LIBRARIES}
-    warcore
-    vudnslib
     stdc++fs
     ${CMAKE_THREAD_LIBS_INIT}
     )

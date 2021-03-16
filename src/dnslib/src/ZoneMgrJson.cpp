@@ -101,9 +101,16 @@ void ZoneMgrJson::Commit(ZoneMgrJson::zones_t &zones)
 void ZoneMgrJson::Load(const std::filesystem::path &path)
 {
     auto zones = make_shared<std::vector<ZoneNode>>();
-    fileToObject(*zones, path);
-    for(auto& z: *zones) {
-        z.Init({});
+
+    if (std::filesystem::is_regular_file(path)) {
+        fileToObject(*zones, path);
+        for(auto& z: *zones) {
+            z.Init({});
+        }
+    } else {
+        LOG_WARN_FN << "The dns zones file "
+            << war::log::Esc(path)
+            << " does not exist!. Cannot load zones";
     }
     zones_ = move(zones);
     storage_path_ = path;
@@ -128,17 +135,7 @@ void ZoneMgrJson::Save(zones_container_t& storage, const std::filesystem::path &
 ZoneMgrJson::ptr_t ZoneMgrJson::Create(const DnsConfig &config)
 {
     auto mgr = make_shared<ZoneMgrJson>();
-
-    filesystem::path path = config.data_path;
-
-    if (std::filesystem::is_regular_file(path)) {
-        mgr->Load(path);
-    } else {
-        LOG_WARN_FN << "The dns zones file "
-            << war::log::Esc(config.data_path)
-            << " does not exist!. Cannot load zones";
-    }
-
+    mgr->Load(config.data_path);
     return mgr;
 }
 
@@ -151,6 +148,8 @@ Zone::ptr_t vuberdns::ZoneMgrJson::CreateZone(const string_view &domain, const Z
     if (!Zone::Validate(domain, zone)) {
         throw ValidateException("Domain "s + string(domain) + " fails validation");
     }
+
+    std::lock_guard<mutex> lock{mutex_};
 
     auto zones = CopyZones();
 
@@ -219,6 +218,8 @@ Zone::ptr_t ZoneMgrJson::Update(const string_view &domain, const Zone &zone)
         throw ValidateException("Domain "s + string(domain) + " fails validation");
     }
 
+    std::lock_guard<mutex> lock{mutex_};
+
     auto zones = CopyZones();
 
     if (auto z = Search(zones, toKey(domain))) {
@@ -233,6 +234,8 @@ Zone::ptr_t ZoneMgrJson::Update(const string_view &domain, const Zone &zone)
 
 void vuberdns::ZoneMgrJson::Delete(const string_view &domain)
 {
+    std::lock_guard<mutex> lock{mutex_};
+
     auto zones = CopyZones();
     bool deleted = false;
 

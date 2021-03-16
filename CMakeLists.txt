@@ -6,13 +6,23 @@ endif()
 
 project(vUberdns VERSION ${VUDNS_VERSION} LANGUAGES CXX)
 
+option(BOOST_ERROR_CODE_HEADER_ONLY "Work-around for another boost issue" ON)
+if (BOOST_ERROR_CODE_HEADER_ONLY)
+    add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY=1)
+endif()
+
 include(GNUInstallDirs)
 
 find_package(ZLIB REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Threads)
 
-find_package(Boost 1.70 REQUIRED COMPONENTS
+if(NOT DEFINED USE_BOOST_VERSION)
+    set(USE_BOOST_VERSION 1.73)
+endif()
+
+
+find_package(Boost ${USE_BOOST_VERSION} REQUIRED COMPONENTS
     system
     program_options
     filesystem

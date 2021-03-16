@@ -75,7 +75,7 @@ public:
                 names_.push_back(label);
 
                 // Validate the name
-                static const boost::regex pat{ R"([a-z0-9\.\-]+)",
+                static const boost::regex pat{ R"([a-z0-9\.\-_]+)",
                     boost::regex::icase | boost::regex::optimize};
                 if (!boost::regex_match(p, p + len, pat)) {
                     WAR_THROW_T(IllegalLabelException, "Invalid char in label");

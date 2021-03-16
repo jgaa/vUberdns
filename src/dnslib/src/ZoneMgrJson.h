@@ -111,6 +111,7 @@ public:
 
    void Delete(const std::string_view &domain) override;
    void ForEachZone(const zone_fn_t& fn) override;
+   std::mutex mutex_;
 };
 } // namespace
 
