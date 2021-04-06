@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.8)
 
 if (NOT DEFINED VUDNS_VERSION)
-    set(VUDNS_VERSION 0.1.2)
+    set(VUDNS_VERSION 0.1.4)
 endif()
 
 project(vUberdns VERSION ${VUDNS_VERSION} LANGUAGES CXX)

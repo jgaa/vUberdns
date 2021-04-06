@@ -35,7 +35,7 @@ namespace {
     http::HttpServer::Reply make_reply(const RestReply& data,
                                        uint16_t httpCode = 200) {
         if (data.reason) {
-            LOG_DEBUG << "Returning " << httpCode << ' ' << *data.reason;
+            LOG_TRACE1_FN << "Returning " << httpCode << ' ' << *data.reason;
         }
         return {httpCode, data.reason.has_value(), toJson(data)};
     }
@@ -51,7 +51,7 @@ namespace {
     http::HttpServer::Reply make_reply(const std::string& reason,
                                        uint16_t httpCode = 404) {
 
-        return make_reply({true, reason, {}}, httpCode);
+        return make_reply(RestReply{true, reason}, httpCode);
     }
 
     void Merge(ZoneMgrJson::ZoneData& zone, const Zone& existingZone) {
@@ -95,7 +95,7 @@ RestHandler::RestHandler(ZoneMgr &zoneMgr)
 
 http::HttpServer::Reply RestHandler::Process(const http::HttpServer::Request &req)
 {
-    LOG_NOTICE << "Rest request: " << req.verb << " " << req.path;
+    LOG_TRACE1_FN << "Rest request: " << req.verb << " " << req.path;
 
     if (req.verb == "GET") {
         return ProcessGet(req);

@@ -21,6 +21,34 @@ using namespace std::string_literals;
 
 
 namespace {
+
+struct LogRequest {
+    boost::asio::ip::tcp::endpoint local, remote;
+    beast::string_view type;
+    beast::string_view location;
+    string_view user;
+    int replyValue = 0;
+    beast::string_view replyText;
+    bool done = false;
+
+    void set(const http::response<http::string_body>& res) {
+        replyValue = res.result_int();
+        replyText = res.reason();
+        flush();
+    }
+
+    void flush() {
+        if (!done) {
+            LOG_INFO << remote << " --> " << local << " [" << user << "] " << type << ' ' << log::Esc(location.data()) << ' ' << replyValue << ' ' << replyText;
+        }
+        done = true;
+    }
+
+    ~LogRequest() {
+        flush();
+    }
+};
+
 template <typename streamT, bool isTls>
 void DoSession(streamT& stream,
                const HttpServer::handle_fn_t& handler,
@@ -29,7 +57,7 @@ void DoSession(streamT& stream,
 {
     assert(handler);
 
-    LOG_NOTICE << "Processing API request: " << beast::get_lowest_layer(stream).socket().remote_endpoint()
+    LOG_TRACE1 << "Processing session: " << beast::get_lowest_layer(stream).socket().remote_endpoint()
                << " --> " << beast::get_lowest_layer(stream).socket().local_endpoint();
 
     bool close = false;
@@ -46,6 +74,10 @@ void DoSession(streamT& stream,
     }
 
     while(!close) {
+        LogRequest lr;
+        lr.remote =  beast::get_lowest_layer(stream).socket().remote_endpoint();
+        lr.local = beast::get_lowest_layer(stream).socket().local_endpoint();
+
         beast::get_lowest_layer(stream).expires_after(std::chrono::seconds(30));
         http::request<http::string_body> req;
         http::async_read(stream, buffer, req, yield[ec]);
@@ -60,13 +92,18 @@ void DoSession(streamT& stream,
             close = true;
         }
 
+        lr.location = req.base().target();
+        lr.type = req.base().method_string();
+
         bool authorized = false;
         if (auto it = req.base().find(http::field::authorization) ; it != req.base().end()) {
-            authorized = instance.Authenticate({it->value().data(), it->value().size()});
+            auto [a, u] = instance.Authenticate({it->value().data(), it->value().size()});
+            lr.user = u;
+            authorized = a;
         }
 
         if (!authorized) {
-            LOG_NOTICE << "Request was unauthorized!";
+            LOG_TRACE1_FN << "Request was unauthorized!";
 
             http::response<http::string_body> res;
             res.body() = "Access denied";
@@ -75,6 +112,7 @@ void DoSession(streamT& stream,
             res.base().set(http::field::content_type, "application/json; charset=utf-8");
             res.base().set(http::field::connection, close ? "close" : "keep-alive");
             res.prepare_payload();
+            lr.set(res);
 
             http::async_write(stream, res, yield[ec]);
             if(ec) {
@@ -109,9 +147,10 @@ void DoSession(streamT& stream,
         res.base().set(http::field::connection, close ? "close" : "keep-alive");
         res.prepare_payload();
 
+        lr.set(res);
         http::async_write(stream, res, yield[ec]);
         if(ec) {
-            LOG_ERROR << "write failed: " << ec.message();
+            LOG_WARN << "write failed: " << ec.message();
             return;
         }
     }
@@ -122,7 +161,7 @@ void DoSession(streamT& stream,
         // Perform the SSL shutdown
         stream.async_shutdown(yield[ec]);
         if (ec) {
-            LOG_NOTICE << "TLS shutdown failed: " << ec.message();
+            LOG_TRACE1 << "TLS shutdown failed: " << ec.message();
         }
     } else {
         // Send a TCP shutdown
@@ -134,7 +173,7 @@ void DoSession(streamT& stream,
 
 HttpServer::HttpServer(war::Threadpool &ioThreadpool,
                        const HttpServer::Config config,
-                       handle_fn_t handler)
+                       const handle_fn_t& handler)
     : config_{move(config)}, io_threadpool_{ioThreadpool}, handler_{move(handler)}
 {
     assert(handler_);
@@ -145,11 +184,11 @@ void HttpServer::Start()
     Listen();
 }
 
-bool HttpServer::Authenticate(const string_view &authHeader)
+std::pair<bool, std::string_view /* user name */> HttpServer::Authenticate(const string_view &authHeader)
 {
     auto pos = authHeader.find(' ');
     if (pos == string_view::npos) {
-        return false;
+        return {false, {}};
     }
     auto token = authHeader.substr(pos +1);
 
@@ -158,11 +197,11 @@ bool HttpServer::Authenticate(const string_view &authHeader)
         auto auth = Base64Encode(concat);
 
         if (token == auth) {
-            return true;
+            return {true, user.name};
         }
     }
 
-    return false;
+    return {false, {}};
 }
 
 void HttpServer::Listen()

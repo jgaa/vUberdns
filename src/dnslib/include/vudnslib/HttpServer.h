@@ -54,10 +54,10 @@ public:
         std::vector<User> users;
     };
 
-    HttpServer(war::Threadpool& ioThreadpool, const Config config, handle_fn_t handler);
+    HttpServer(war::Threadpool& ioThreadpool, const Config config, const handle_fn_t& handler);
     void Start();
 
-    bool Authenticate(const std::string_view& authHeader);
+    std::pair<bool, std::string_view /* user name */> Authenticate(const std::string_view& authHeader);
 
 private:
     void Listen();

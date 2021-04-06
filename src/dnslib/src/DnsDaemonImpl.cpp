@@ -87,57 +87,59 @@ void DnsDaemonImpl::StartReceivingUdpAt(std::string host, std::string port) {
             udp::endpoint sender_endpoint;
             ScheduleDnsHousekeeping(dns_pipeline);
 
-            // Loop over incoming requests
-            for (;socket.is_open();) {
-                const size_t bytes_received = socket.async_receive_from(
-                    boost::asio::buffer(query_buffer),
-                    sender_endpoint,
-                    yield);
+            try {
+                // Loop over incoming requests
+                for (;socket.is_open();) {
+                    const size_t bytes_received = socket.async_receive_from(
+                        boost::asio::buffer(query_buffer),
+                        sender_endpoint,
+                        yield);
 
-                thd_stats_dns_.bytes_received += bytes_received;
-                RequestStats request_stats(thd_stats_dns_);
+                    thd_stats_dns_.bytes_received += bytes_received;
+                    RequestStats request_stats(thd_stats_dns_);
 
-                if (!ec) {
-                    ++thd_stats_dns_.udp_connections;
-                    LOG_TRACE2_FN << "Incoming Query: "
-                        << socket << ' '
-                        << socket.local_endpoint()
-                        << " <-- "
-                        << sender_endpoint
-                        << " of " << bytes_received << "  bytes.";
+                    if (!ec) {
+                        ++thd_stats_dns_.udp_connections;
+                        LOG_TRACE2_FN << "Incoming Query: "
+                            << socket << ' '
+                            << socket.local_endpoint()
+                            << " <-- "
+                            << sender_endpoint
+                            << " of " << bytes_received << "  bytes.";
 
-                    try {
+                        try {
 
-                        ProcesssQuerey(&query_buffer[0],
-                                        bytes_received,
-                                        reply_buffer,
-                                        request_stats);
+                            ProcesssQuerey(&query_buffer[0],
+                                            bytes_received,
+                                            reply_buffer,
+                                            request_stats);
 
-                    } catch(const UnknownDomain&) {
-                        ++thd_stats_dns_.unknown_names;
-                        // Do not reply
-                        continue;
-                    } WAR_CATCH_ERROR;
+                        } catch(const UnknownDomain&) {
+                            ++thd_stats_dns_.unknown_names;
+                            // Do not reply
+                            continue;
+                        } WAR_CATCH_ERROR;
 
-                    if (socket.is_open() && !reply_buffer.empty()) {
-                        LOG_TRACE3_FN << "Replying " << reply_buffer.size()
-                            << " bytes to " << socket;
+                        if (socket.is_open() && !reply_buffer.empty()) {
+                            LOG_TRACE3_FN << "Replying " << reply_buffer.size()
+                                << " bytes to " << socket;
 
-                        socket.async_send_to(
-                            boost::asio::buffer(reply_buffer),
-                            sender_endpoint,
-                            yield);
+                            socket.async_send_to(
+                                boost::asio::buffer(reply_buffer),
+                                sender_endpoint,
+                                yield);
 
-                        if (!ec) {
-                            request_stats.state = RequestStats::State::SUCESS;
-                            thd_stats_dns_.bytes_sent += reply_buffer.size();
+                            if (!ec) {
+                                request_stats.state = RequestStats::State::SUCESS;
+                                thd_stats_dns_.bytes_sent += reply_buffer.size();
+                            }
                         }
+                    } else { // error
+                        LOG_DEBUG_FN << "Receive error " << ec.message() << " from socket " << socket;
+                        ++thd_stats_dns_.failed_udp_connections;;
                     }
-                } else { // error
-                    LOG_DEBUG_FN << "Receive error " << ec << " from socket " << socket;
-                    ++thd_stats_dns_.failed_udp_connections;;
                 }
-            }
+            } WAR_CATCH_ERROR;
         });
     } // for endpoints
 }
@@ -146,8 +148,12 @@ void DnsDaemonImpl::StartReceivingUdpAt(std::string host, std::string port) {
 void DnsDaemonImpl::ScheduleDnsHousekeeping(Pipeline& pipeline)
 {
     pipeline.PostWithTimer(task_t{[this, &pipeline]() {
-        UpdateStats();
-        ScheduleDnsHousekeeping(pipeline);
+        try {
+            UpdateStats();
+            ScheduleDnsHousekeeping(pipeline);
+        } catch (const std::exception& ex) {
+            LOG_ERROR << "Caught exception while keeping house: " << ex;
+        }
     }, "Periodic DNS connection-housekeeping"},
     housekeeping_interval_in_seconds_ * 1000);
 }
@@ -196,34 +202,34 @@ void DnsDaemonImpl::ProcesssQuerey(const char *queryBuffer,
         /* This exception indicate that we are not authoritative for this
             * domain, so we will not reply.
             */
-        LOG_TRACE3_FN << "Caught exception for unknown domain: " << ex;
+        LOG_DEBUG_FN << "Caught exception for unknown domain: " << ex.what();
         ++thd_stats_dns_.unknown_names;
         throw;
     } catch(const UnknownSubDomain& ex) {
-        LOG_TRACE3_FN << "Caught exception for unknown sub-domain: " << ex;
+        LOG_DEBUG_FN << "Caught exception for unknown sub-domain: " << ex.what();
         // Unknown subdomain for a zone we own. Reply with error.
         CreateErrorReply(MessageHeader::Rcode::NAME_ERROR,
                             header, replyBuffer);
         ++thd_stats_dns_.unknown_names;
         return;
     } catch(const NoSoaRecord& ex) {
-        LOG_DEBUG_FN << "Caught exception: " << ex;
+        LOG_DEBUG_FN << "Caught exception NoSoaRecord: " << ex.what();
         CreateErrorReply(MessageHeader::Rcode::SERVER_FAILURE,
                             header, replyBuffer);
         return;
     } catch(const Refused& ex) {
-        LOG_DEBUG_FN << "Caught exception: " << ex;
+        LOG_DEBUG_FN << "Caught exception Refused: " << ex.what();
         CreateErrorReply(MessageHeader::Rcode::REFUSED,
                             header, replyBuffer);
         return;
     } catch(const LabelHeader::NoLabelsException& ex) {
-        LOG_DEBUG_FN << "Caught exception: " << ex;
+        LOG_DEBUG_FN << "Caught exception NoLabelsException: " << ex.what();
         CreateErrorReply(MessageHeader::Rcode::FORMAT_ERROR,
                             header, replyBuffer);
         requestStats.state = RequestStats::State::BAD;
         return;
     } catch(const LabelHeader::IllegalLabelException& ex) {
-        LOG_DEBUG_FN << "Caught exception: " << ex;
+        LOG_DEBUG_FN << "Caught exception IllegalLabelException: " << ex.what();
         CreateErrorReply(MessageHeader::Rcode::FORMAT_ERROR,
                             header, replyBuffer);
         requestStats.state = RequestStats::State::BAD;
@@ -239,7 +245,7 @@ void DnsDaemonImpl::ProcesssQuerey(const char *queryBuffer,
                             header, replyBuffer);
         return;
     } catch(const std::exception& ex) {
-        LOG_DEBUG_FN << "Caught exception: " << ex;
+        LOG_DEBUG_FN << "Caught exception: " << ex.what();
         CreateErrorReply(MessageHeader::Rcode::SERVER_FAILURE,
                             header, replyBuffer);
         return;
@@ -316,7 +322,7 @@ void DnsDaemonImpl::ProcessQuestions(const char *queryBuffer,
     try {
         for(const Question& question : questions) {
 
-            LOG_TRACE2_FN << "Request ID " << header.GetId()
+            LOG_DEBUG << "Request ID " << header.GetId()
                 << " asks about type " << question.GetQtype()
                 << " class " << question.GetQclass()
                 << " regarding " << log::Esc(question.GetDomainName());

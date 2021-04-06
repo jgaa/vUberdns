@@ -1,6 +1,6 @@
 
 #include <unistd.h>
-#include <signal.h>
+#include <csignal>
 #include <string>
 
 #include <boost/program_options.hpp>
@@ -127,6 +127,13 @@ bool ParseCommandLine(int argc, char *argv[], log::LogEngine& logger, Configurat
 
 
 int main(int argc, char *argv[]) {
+    try {
+        locale loc("");
+    } catch (const std::exception& e) {
+        std::cout << "Locales in Linux are fundamentally broken. Never worked. Never will. Overriding the current mess with LC_ALL=C" << endl;
+        setenv("LC_ALL", "C", 1);
+    }
+
     /* Enable logging.
      */
     log::LogEngine logger;
@@ -158,8 +165,8 @@ int main(int argc, char *argv[]) {
 
         if (configuration.hosts.empty()) {
             LOG_INFO << "No host-names specified. Will listen to all interfaces.";
-            configuration.hosts.push_back("0.0.0.0");
-            configuration.hosts.push_back("[::]");
+            configuration.hosts.emplace_back("0.0.0.0");
+            configuration.hosts.emplace_back("[::]");
         }
 
         for(const auto& host : configuration.hosts) {
@@ -169,12 +176,12 @@ int main(int argc, char *argv[]) {
 
             auto brpos = hostname.find(']');
 
-            if (brpos == hostname.npos) {
+            if (brpos == std::string::npos) {
                 brpos = 0;
             }
 
             auto pos = hostname.find(':', brpos);
-            if (pos != hostname.npos) {
+            if (pos != std::string::npos) {
                 port = hostname.substr(pos + 1);
                 hostname.resize(pos);
             }
