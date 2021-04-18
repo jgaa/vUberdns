@@ -50,10 +50,10 @@ struct LogRequest {
 };
 
 template <typename streamT, bool isTls>
-void DoSession(streamT& stream,
+void DoSession_(streamT& stream,
                const HttpServer::handle_fn_t& handler,
                HttpServer& instance,
-               boost::asio::yield_context yield)
+               boost::asio::yield_context& yield)
 {
     assert(handler);
 
@@ -122,9 +122,10 @@ void DoSession(streamT& stream,
         }
 
         if (!req.body().empty()) {
-            const auto ct =req.at(http::field::content_type);
-            // TODO: Check that the type is json
-            LOG_TRACE1 << "Request has content type: " << ct;
+            if (auto it = req.base().find(http::field::content_type) ; it != req.base().end()) {
+                // TODO: Check that the type is json
+                LOG_TRACE1 << "Request has content type: " << it->value();
+            }
         }
 
         // TODO: Check that the client accepts our json reply
@@ -168,8 +169,19 @@ void DoSession(streamT& stream,
         stream.socket().shutdown(tcp::socket::shutdown_send, ec);
     }
 }
+
+template <typename streamT, bool isTls>
+void DoSession(streamT& stream,
+               const HttpServer::handle_fn_t& handler,
+               HttpServer& instance,
+               boost::asio::yield_context yield) {
+
+    try {
+        DoSession_<streamT, isTls>(stream, handler, instance, yield);
+    } WAR_CATCH_ALL_E;
 }
 
+} // ns
 
 HttpServer::HttpServer(war::Threadpool &ioThreadpool,
                        const HttpServer::Config config,
