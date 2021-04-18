@@ -174,6 +174,7 @@ template <typename streamT, bool isTls>
 void DoSession(streamT& stream,
                const HttpServer::handle_fn_t& handler,
                HttpServer& instance,
+               shared_ptr<ssl::context> sslctx,
                boost::asio::yield_context yield) {
 
     try {
@@ -285,16 +286,16 @@ void HttpServer::Listen()
                     }
 
                     if (cep.tls) {
-                        ssl::context ctx{ssl::context::tls_server};
-                        ctx.use_certificate_chain_file(cep.tls->cert);
-                        ctx.use_private_key_file(cep.tls->key, ssl::context::pem);
+                        auto ctx = make_shared<ssl::context>(ssl::context::tls_server);
+                        ctx->use_certificate_chain_file(cep.tls->cert);
+                        ctx->use_private_key_file(cep.tls->key, ssl::context::pem);
 
                         boost::asio::spawn(
                                         acceptor.get_executor(),
                                         std::bind(
                                             &DoSession<beast::ssl_stream<beast::tcp_stream>, true>,
-                                            beast::ssl_stream<beast::tcp_stream>(std::move(socket), ctx),
-                                            handler_, *this, _1));
+                                            beast::ssl_stream<beast::tcp_stream>(std::move(socket), *ctx),
+                                            handler_, *this, ctx, _1));
 
                     } else {
                         boost::asio::spawn(
@@ -302,7 +303,7 @@ void HttpServer::Listen()
                                         std::bind(
                                             &DoSession<beast::tcp_stream, false>,
                                             beast::tcp_stream(std::move(socket)),
-                                            handler_, *this, _1));
+                                            handler_, *this, nullptr, _1));
                     }
                 }
 
