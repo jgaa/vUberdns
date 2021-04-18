@@ -49,8 +49,8 @@ struct LogRequest {
     }
 };
 
-template <typename streamT, bool isTls>
-void DoSession_(streamT& stream,
+template <bool isTls, typename streamT>
+void DoSession(streamT& stream,
                const HttpServer::handle_fn_t& handler,
                HttpServer& instance,
                boost::asio::yield_context& yield)
@@ -170,18 +170,6 @@ void DoSession_(streamT& stream,
     }
 }
 
-template <typename streamT, bool isTls>
-void DoSession(streamT& stream,
-               const HttpServer::handle_fn_t& handler,
-               HttpServer& instance,
-               shared_ptr<ssl::context> sslctx,
-               boost::asio::yield_context yield) {
-
-    try {
-        DoSession_<streamT, isTls>(stream, handler, instance, yield);
-    } WAR_CATCH_ALL_E;
-}
-
 } // ns
 
 HttpServer::HttpServer(war::Threadpool &ioThreadpool,
@@ -262,6 +250,17 @@ void HttpServer::Listen()
                     return;
                 }
 
+                ssl::context sslCtx{ssl::context::tls_server};
+                if (cep.tls) {
+                    try {
+                        sslCtx.use_certificate_chain_file(cep.tls->cert);
+                        sslCtx.use_private_key_file(cep.tls->key, ssl::context::pem);
+                    } catch(const exception& ex) {
+                        LOG_ERROR << "Failed to initialize tls context: " << ex.what();
+                        return;
+                    }
+                }
+
                 // Bind to the server address
                 acceptor.bind(ep, ec);
                 if(ec) {
@@ -276,34 +275,36 @@ void HttpServer::Listen()
                     return;
                 }
 
-                for(;!ios.stopped();)
-                {
+                size_t errorCnt = 0;
+                const size_t maxErrors = 64;
+                for(;!ios.stopped() && errorCnt < maxErrors;) {
                     tcp::socket socket{ios};
                     acceptor.async_accept(socket, yield[ec]);
                     if(ec) {
+                        // I'm unsure about how to deal with errors here.
+                        // For now, allow `maxErrors` to occur before giving up
                         LOG_WARN << "Failed to accept on " << ep << ": " << ec;
-                        return;
+                        ++errorCnt;
+                        continue;
                     }
 
-                    if (cep.tls) {
-                        auto ctx = make_shared<ssl::context>(ssl::context::tls_server);
-                        ctx->use_certificate_chain_file(cep.tls->cert);
-                        ctx->use_private_key_file(cep.tls->key, ssl::context::pem);
+                    errorCnt = 0;
 
-                        boost::asio::spawn(
-                                        acceptor.get_executor(),
-                                        std::bind(
-                                            &DoSession<beast::ssl_stream<beast::tcp_stream>, true>,
-                                            beast::ssl_stream<beast::tcp_stream>(std::move(socket), *ctx),
-                                            handler_, *this, ctx, _1));
+                    if (cep.tls) {
+                        boost::asio::spawn(acceptor.get_executor(), [this, &sslCtx, socket=move(socket)](boost::asio::yield_context yield) mutable {
+                            beast::ssl_stream<beast::tcp_stream> stream{std::move(socket), sslCtx};
+                            try {
+                                DoSession<true>(stream, handler_, *this, yield);
+                            } WAR_CATCH_ALL_E;
+                        });
 
                     } else {
-                        boost::asio::spawn(
-                                        acceptor.get_executor(),
-                                        std::bind(
-                                            &DoSession<beast::tcp_stream, false>,
-                                            beast::tcp_stream(std::move(socket)),
-                                            handler_, *this, nullptr, _1));
+                        boost::asio::spawn(acceptor.get_executor(), [this, socket=move(socket)](boost::asio::yield_context yield) mutable {
+                            beast::tcp_stream stream{move(socket)};
+                            try {
+                                DoSession<false>(stream, handler_, *this, yield);
+                            } WAR_CATCH_ALL_E;
+                        });
                     }
                 }
 
