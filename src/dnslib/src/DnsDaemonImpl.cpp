@@ -133,6 +133,11 @@ void DnsDaemonImpl::StartReceivingUdpAt(std::string host, std::string port) {
                                 request_stats.state = RequestStats::State::SUCESS;
                                 thd_stats_dns_.bytes_sent += reply_buffer.size();
                             }
+                        } else {
+                            LOG_WARN << "Cannot reply to sender. Socket is "
+                                     << (socket.is_open() ? "open" : "closed")
+                                     << ", reply-lenght is "
+                                     << (reply_buffer.empty() ? "empty" : "ready");
                         }
                     } else { // error
                         LOG_DEBUG_FN << "Receive error " << ec.message() << " from socket " << socket;
@@ -469,8 +474,9 @@ void DnsDaemonImpl::ProcessQuestion(const Question& question, buffer_t& replyBuf
 Zone::ptr_t DnsDaemonImpl::GetSoaZone(const Zone::ptr_t& zone) {
     Zone::ptr_t z;
 
-    for(z = zone; z && !z->soa(); z = zone->parent())
-        ;
+    for(z = zone; z && !z->soa(); z = z->parent()) {
+        LOG_TRACE4 << "Traversing zone " << z->label();
+    }
 
     return z;
 }
