@@ -209,7 +209,19 @@ int main(int argc, char *argv[]) {
         if (!configuration.http_config.empty()) {
             http::HttpServer::Config cfg;
             fileToObject(cfg, configuration.http_config);
-            http = make_unique<http::HttpServer>(thread_pool, cfg, bind(&RestHandler::Process, &rest, _1));
+            http = make_unique<http::HttpServer>(thread_pool, cfg,
+                                                 [&rest](const http::HttpServer::Request& req) -> http::HttpServer::Reply {
+                try {
+                    auto res = rest.Process(req);
+                    return res;
+                } catch(const exception& ex) {
+                    LOG_ERROR << "Unexpected exception from request processing: " << ex.what();
+                }
+
+                return {500, true, "internal error - Unexpected exception from request processing"};
+            }
+            //                                     bind(&RestHandler::Process, &rest, _1)
+            );
             http->Start();
         }
 

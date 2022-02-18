@@ -23,25 +23,38 @@ using namespace std::string_literals;
 namespace {
 
 struct LogRequest {
+    LogRequest() = default;
+    LogRequest(const LogRequest& ) = delete;
+    LogRequest(LogRequest&& ) = delete;
+
     boost::asio::ip::tcp::endpoint local, remote;
-    beast::string_view type;
-    beast::string_view location;
-    string_view user;
+    string type;
+    string location;
+    string user;
     int replyValue = 0;
-    beast::string_view replyText;
-    bool done = false;
+    string replyText;
+
+private:
+    std::once_flag done_;
+
+public:
 
     void set(const http::response<http::string_body>& res) {
         replyValue = res.result_int();
-        replyText = res.reason();
-        flush();
+        replyText = res.reason().to_string();
+        //flush();
     }
 
     void flush() {
-        if (!done) {
-            LOG_INFO << remote << " --> " << local << " [" << user << "] " << type << ' ' << log::Esc(location.data()) << ' ' << replyValue << ' ' << replyText;
+        if (location.empty()) {
+            // some scary bug causes the constructor and destructor to be recalled,
+            // probably on some coroutine resume operations.
+            LOG_TRACE1_FN << "Called out of order!";
+            return;
         }
-        done = true;
+        call_once(done_, [&] {
+            LOG_INFO << remote << " --> " << local << " [" << user << "] " << type << ' ' << log::Esc(location.data()) << ' ' << replyValue << ' ' << replyText;
+        });
     }
 
     ~LogRequest() {
@@ -92,8 +105,8 @@ void DoSession(streamT& stream,
             close = true;
         }
 
-        lr.location = req.base().target();
-        lr.type = req.base().method_string();
+        lr.location = req.base().target().to_string();
+        lr.type = req.base().method_string().to_string();
 
         bool authorized = false;
         if (auto it = req.base().find(http::field::authorization) ; it != req.base().end()) {
@@ -250,11 +263,11 @@ void HttpServer::Listen()
                     return;
                 }
 
-                ssl::context sslCtx{ssl::context::tls_server};
+                auto sslCtx = make_shared<ssl::context>(ssl::context::tls_server);
                 if (cep.tls) {
                     try {
-                        sslCtx.use_certificate_chain_file(cep.tls->cert);
-                        sslCtx.use_private_key_file(cep.tls->key, ssl::context::pem);
+                        sslCtx->use_certificate_chain_file(cep.tls->cert);
+                        sslCtx->use_private_key_file(cep.tls->key, ssl::context::pem);
                     } catch(const exception& ex) {
                         LOG_ERROR << "Failed to initialize tls context: " << ex.what();
                         return;
@@ -291,8 +304,8 @@ void HttpServer::Listen()
                     errorCnt = 0;
 
                     if (cep.tls) {
-                        boost::asio::spawn(acceptor.get_executor(), [this, &sslCtx, socket=move(socket)](boost::asio::yield_context yield) mutable {
-                            beast::ssl_stream<beast::tcp_stream> stream{std::move(socket), sslCtx};
+                        boost::asio::spawn(acceptor.get_executor(), [this, sslCtx, socket=move(socket)](boost::asio::yield_context yield) mutable {
+                            beast::ssl_stream<beast::tcp_stream> stream{std::move(socket), *sslCtx};
                             try {
                                 DoSession<true>(stream, handler_, *this, yield);
                             } WAR_CATCH_ALL_E;

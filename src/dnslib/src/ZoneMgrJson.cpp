@@ -141,7 +141,7 @@ ZoneMgrJson::ptr_t ZoneMgrJson::Create(const DnsConfig &config)
 
 Zone::ptr_t vuberdns::ZoneMgrJson::CreateZone(const string_view &domain, const Zone &zone)
 {
-    if (auto [z, _] = LookupName(domain); z) {
+    if (auto [z, _] = LookupName(domain, false); z) {
         throw AlreadyExistsException("Domain "s + string(domain) + " already exists");
     }
 

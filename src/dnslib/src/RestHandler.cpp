@@ -232,7 +232,7 @@ http::HttpServer::Reply RestHandler::ProcessSet(const http::HttpServer::Request 
         create = get<0>(zone_mgr_.LookupName(zone_name)) == nullptr;
         break;
     case Mode::PATCH: {
-        auto [currentZone,_] = zone_mgr_.LookupName(zone_name);
+        auto [currentZone,_] = zone_mgr_.LookupName(zone_name, false);
         if (currentZone) {
             Merge(zone, *currentZone);
         } else {

@@ -27,7 +27,7 @@ ExternalProject_Add(externalWarlib
 ExternalProject_Add(externalRestcCpp
     PREFIX "${EXTERNAL_PROJECTS_PREFIX}"
     GIT_REPOSITORY "https://github.com/jgaa/restc-cpp.git"
-    GIT_TAG "k8deployer"
+    GIT_TAG "master"
     CMAKE_ARGS
         -DCMAKE_INSTALL_PREFIX=${EXTERNAL_PROJECTS_INSTALL_PREFIX}
         -DRESTC_CPP_WITH_UNIT_TESTS=OFF

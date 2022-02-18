@@ -16,13 +16,18 @@ namespace vuberdns {
 using namespace std;
 namespace bs = boost::system;
 
-std::tuple<Zone::ptr_t, bool> ZoneMgr::LookupName(const string_view &domain)
+std::tuple<Zone::ptr_t, bool> ZoneMgr::LookupName(const string_view &domain, bool throwOnNotFound )
 {
     bool a = false;
     auto z = Lookup(toKey(domain), &a);
 
-    if (z && !boost::iequals(domain, z->GetDomainName())) {
-        throw bs::system_error{bs::errc::make_error_code(bs::errc::no_such_file_or_directory)};
+    auto dn = z->GetDomainName();
+
+    if (z && !boost::iequals(domain, dn)) {
+        if (throwOnNotFound) {
+            throw bs::system_error{bs::errc::make_error_code(bs::errc::no_such_file_or_directory)};
+        }
+        return {};
     }
 
     return {z, a};

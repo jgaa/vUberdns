@@ -30,7 +30,7 @@ public:
      *
      *  \throws NotFoundException
      */
-    virtual std::tuple<Zone::ptr_t /*zone*/, bool /*authorative*/> LookupName(const std::string_view& domain);
+    virtual std::tuple<Zone::ptr_t /*zone*/, bool /*authorative*/> LookupName(const std::string_view& domain, bool throwOnNotFound = true);
 
     /*! Create a zone.
      *
