@@ -19,18 +19,20 @@ namespace bs = boost::system;
 std::tuple<Zone::ptr_t, bool> ZoneMgr::LookupName(const string_view &domain, bool throwOnNotFound )
 {
     bool a = false;
-    auto z = Lookup(toKey(domain), &a);
+    if (auto z = Lookup(toKey(domain), &a)) {
+        auto dn = z->GetDomainName();
 
-    auto dn = z->GetDomainName();
-
-    if (z && !boost::iequals(domain, dn)) {
-        if (throwOnNotFound) {
-            throw bs::system_error{bs::errc::make_error_code(bs::errc::no_such_file_or_directory)};
+        if (z && !boost::iequals(domain, dn)) {
+            if (throwOnNotFound) {
+                throw bs::system_error{bs::errc::make_error_code(bs::errc::no_such_file_or_directory)};
+            }
+            return {};
         }
-        return {};
+
+        return {z, a};
     }
 
-    return {z, a};
+    return {};
 }
 
 ZoneMgr::ptr_t ZoneMgr::Create(const DnsConfig& config) {
